@@ -30,7 +30,9 @@ function Rigister() {
                 Already have an account?{" "}
                 <a href="/login" className="i-Login">Log in</a>
                   </label>
-
+              <div>
+                ee
+              </div>
               </div>
           </div>
           </div>
