@@ -1,0 +1,13 @@
+.trending {
+  padding: 2rem;
+  text-align: center;
+  background-color: #1a1a2e;
+}
+
+.sound-list {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
