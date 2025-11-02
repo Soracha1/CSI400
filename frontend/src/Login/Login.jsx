@@ -25,7 +25,7 @@ function Login() {
         <div className="login-actions">
           <button className="login-button">Log in</button>
         </div>    
-        <div className="login-links">
+        <div className="register-links">
           <label>
             Don't have an account?{" "}
             <a href="/register" className="register-link">register</a>
