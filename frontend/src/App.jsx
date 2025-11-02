@@ -4,6 +4,7 @@ import HeroSection from "./components/HeroSection";
 import TrendingSounds from "./components/TrendingSounds";
 import Footer from "./components/Footer";
 import UploadSong from "./upload/uploads";
+import Login from "./Login/Login";
 import Rigister from "./Rigisters/Rigister";
 
 function App() {
@@ -11,7 +12,8 @@ function App() {
     <div>
       
       <Navbar />
-      <Rigister />
+      <Login />
+      {/*<Rigister />*/}
       {/* <HeroSection />
       <TrendingSounds />
       <Footer /> */}
