@@ -13,7 +13,7 @@ function App() {
       
       <Navbar />
       <Login />
-      {/*<Rigister />*/}
+      {/* <Rigister />*/}
       {/* <HeroSection />
       <TrendingSounds />
       <Footer /> */}

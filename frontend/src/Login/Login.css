@@ -70,4 +70,32 @@ input[type="text"], input[type="password"] {
     cursor: pointer;
 }
 
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-container input {
+  width: 100%;
+  padding-right: 40px; /* เว้นที่ให้ปุ่มตาอยู่ในกล่อง */
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #000;
+}
+
+.toggle-password:hover {
+  color: #000; /* เมื่อเอาเมาส์ไปวางให้เข้มขึ้นนิดหน่อย */
+}
+
+
 
