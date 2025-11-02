@@ -11,9 +11,9 @@ function App() {
   return (
     <div>
       
-      <Navbar />
+      {/*<Navbar />*/}
       <Login />
-      {/* <Rigister />*/}
+       {/*<Rigister />*/}
       {/* <HeroSection />
       <TrendingSounds />
       <Footer /> */}
