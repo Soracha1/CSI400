@@ -13,7 +13,7 @@ function Login() {
         <div className="password-section">
           <div className="forgot-password-container">
             <a href="/forgotpassword" className="forgot-password">
-              Forgot Password?
+              Forgot?
             </a>
           </div>
           <div className="password-field">
@@ -24,11 +24,11 @@ function Login() {
 
         <div className="login-actions">
           <button className="login-button">Log in</button>
-        </div>
+        </div>    
         <div className="login-links">
           <label>
             Don't have an account?{" "}
-            <a href="/register" className="register-link">Sign up</a>
+            <a href="/register" className="register-link">register</a>
           </label>
         </div>
       </div>
