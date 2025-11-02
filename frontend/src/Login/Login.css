@@ -63,7 +63,7 @@ input[type="text"], input[type="password"] {
 }
 
 .forgot-password {
-    color: #ffffff;
+    color: #0a1374;
     text-decoration: underline;
     font-size: 12px;
     cursor: pointer;
