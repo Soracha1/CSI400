@@ -6,12 +6,12 @@ import Footer from "./components/Footer";
 import UploadSong from "./upload/uploads";
 import Login from "./Login/Login";
 import Rigister from "./Rigisters/Rigister";
- HEAD
+ 
 import Profile from "./Profiles/Profile";
 
 import SongList from "./home/SongList";
 import EditProfile from "./editprofile/editprofile";
-489aaf50477b4233aac9a37342bc2b0284c16e41
+
 
 function App() {
   return (
@@ -32,12 +32,12 @@ function App() {
        {/*<Login />*/} 
        {/*<Rigister />*/}
       {/* <HeroSection /> */}
-      <EditProfile />
+      {/* <EditProfile /> */}
       {/* <TrendingSounds /> */}
       {/* <Footer /> */}
        {/*<UploadSong />*/} 
       {/*<SongList/>*/}
- 489aaf50477b4233aac9a37342bc2b0284c16e41
+
     </div>
   );
 }

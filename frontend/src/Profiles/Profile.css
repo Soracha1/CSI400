@@ -2,6 +2,7 @@
 .profile-container {
   background-color: #343A4A;
   min-height: 100vh;
+    padding: 200px;
   font-family: "Poppins", sans-serif;
   color: white;
 }
@@ -9,7 +10,8 @@
 /* ส่วนหัวที่มี Gradient */
 .profile-header {
   background: linear-gradient(to bottom, #66b3ff, #3399ff);
-  height: 200px;
+  height: 295px;
+  width: 1980px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -30,8 +32,8 @@
 }
 
 .profile-avatar img {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   border: 3px solid white;
   object-fit: cover;
@@ -93,7 +95,7 @@
   width: 700px;
   height: 20px;
   margin-top: 20px;
-  margin-left: 410px;
+  margin-left: 650px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
