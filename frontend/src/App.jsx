@@ -20,8 +20,8 @@ function App() {
  HEAD
       <Navbar />
       {/* <Login /> */}
-      {/* <Rigister /> */}
-      <Profile />
+      <Rigister />
+      {/* <Profile /> */}
       {/* <HeroSection />
 
       <TrendingSounds />

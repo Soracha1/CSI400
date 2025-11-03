@@ -23,10 +23,11 @@ function Login() {
             <label htmlFor="password">Password</label><br />
             <div className="password-input-container">
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? "text" : "password " }
                 id="password"
                 name="password"
                 required
+                
               />
               <button
                 type="button"
