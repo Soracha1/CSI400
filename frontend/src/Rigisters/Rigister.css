@@ -31,7 +31,7 @@
 /* label */
 label {
   font-size: 12px;
-  margin-bottom: -10px;
+  margin-bottom: 100px;
   display: block;
   color: #d1d5db;
 }
@@ -42,6 +42,7 @@ input[type="password"] {
   width: 290px;
   padding: 10px 12px;
   margin-bottom: 15px;
+  margin-top: -10px;
   border-radius: 6px;
   border: 1px solid #ffffff;
   background-color: #4D556C;
@@ -54,6 +55,8 @@ input[type="password"] {
 input[type="text"]:focus,
 input[type="password"]:focus {
   border-color: #6C63FF;
+ 
+
   
 }
 
@@ -104,6 +107,8 @@ input[type="password"]:focus {
 .i-google button:hover {
   background-color: #f3f4f6;
 }
+
+
 
 /* ลิงก์ Log in */
 .i-login-text {
