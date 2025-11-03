@@ -6,15 +6,18 @@ import Footer from "./components/Footer";
 import UploadSong from "./upload/uploads";
 import Login from "./Login/Login";
 import Rigister from "./Rigisters/Rigister";
+import Profile from "./Profiles/Profile";
 
 function App() {
   return (
     <div>
       
       <Navbar />
-      <Login />
-      {/*<Rigister />*/}
+      {/* <Login /> */}
+      {/* <Rigister /> */}
+      <Profile />
       {/* <HeroSection />
+
       <TrendingSounds />
       <Footer /> */}
       {/* <UploadSong /> */}
