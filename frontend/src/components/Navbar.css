@@ -1,23 +1,89 @@
-.navbar {
+/* Navbar ติดบนสุด */
+
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #0b0b1c;
-  padding: 1rem 3rem;
+  padding: 10px 60px;
+  background-color: #0A071E;
   color: white;
+  font-family: "Poppins", sans-serif;
+  z-index: 999;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-.menu {
-  list-style: none;
-  display: flex;
-  gap: 2rem;
-}
-
-.signup-btn {
-  background: linear-gradient(90deg, #6b4eff, #7cf0ff);
-  border: none;
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+/* โลโก้ */
+.logo {
+  height: 65px;
+  margin-left: 200px;   /* 🔽 เดิม 120px → ลดลงให้เข้าใกล้ตรงกลาง */
   cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+/* ส่วนขวาของ Navbar */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  margin-right: 200px;  /* 🔽 เดิม 120px → ลดลงให้ขยับเข้าหาโลโก้ */
+}
+
+/* ลิงก์เมนู */
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+
+.nav-link:hover {
+  color: #4edfff;
+}
+
+/* ปุ่มเข้าสู่ระบบ */
+.login-button {
+  background-color: #4edfff;
+  color: #0b0d2c;
+  padding: 10px 22px;
+  border-radius: 25px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.login-button:hover {
+  background-color: #3ac4e6;
+}
+
+/* ปุ่มไอคอนเสียง */
+.icon-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  transition: color 0.3s, transform 0.2s;
+}
+
+.icon-button:hover {
+  color: #4edfff;
+  transform: scale(1.2);
+}
+
+/* ปรับ body ไม่ให้เนื้อหาถูก Navbar ทับ */
+body {
+  padding-top: 90px;
 }
