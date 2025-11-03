@@ -7,18 +7,20 @@ import UploadSong from "./upload/uploads";
 import Login from "./Login/Login";
 import Rigister from "./Rigisters/Rigister";
 import SongList from "./home/SongList";
+import EditProfile from "./editprofile/editprofile";
 
 function App() {
   return (
     <div>
       
       {/*<Navbar />*/}
-       <Login /> 
+       {/*<Login />*/} 
        {/*<Rigister />*/}
       {/* <HeroSection /> */}
+      <EditProfile />
       {/* <TrendingSounds /> */}
       {/* <Footer /> */}
-      {/* <UploadSong /> */}
+       {/*<UploadSong />*/} 
       {/*<SongList/>*/}
     </div>
   );
