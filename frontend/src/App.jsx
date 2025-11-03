@@ -19,7 +19,7 @@ function App() {
       {/* <TrendingSounds /> */}
       {/* <Footer /> */}
       {/* <UploadSong /> */}
-      <SongList/>
+      {/*<SongList/>*/}
     </div>
   );
 }
