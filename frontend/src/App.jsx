@@ -12,14 +12,14 @@ function App() {
   return (
     <div>
       
-      <Navbar />
+      {/* <Navbar /> */}
       {/* <Login /> */}
-       {/*<Rigister />*/}
+       {/* <Rigister /> */}
       {/* <HeroSection /> */}
       {/* <TrendingSounds /> */}
-      {/* <Footer /> */}
-      {/* <UploadSong /> */}
-      <SongList/>
+      <UploadSong />
+      {/* <SongList/> */}
+       {/* <Footer /> */}
     </div>
   );
 }
