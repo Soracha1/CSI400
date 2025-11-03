@@ -1,0 +1,217 @@
+.songlist-wrapper {
+  background-color: #1e1f26;
+  min-height: 100vh;
+  padding: 40px;
+  color: white;
+  font-family: "Poppins", sans-serif;
+  position: relative;
+}
+
+.songlist-title {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 30px;
+}
+
+.carousel-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.song-grid {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  gap: 25px;
+  max-width: 950px;
+  padding: 10px;
+}
+
+.song-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.song-card {
+  flex: 0 0 220px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #2c2e3b 0%, #1b1c24 100%);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.song-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 8px 20px rgba(100, 100, 255, 0.4);
+}
+
+.song-image {
+  height: 100px;
+  background: linear-gradient(90deg, #6a5acd, #9370db, #8a2be2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.heart-icon {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.heart-icon:hover {
+  transform: scale(1.2);
+}
+
+.waveform {
+  width: 80%;
+  height: 40%;
+  background: url("https://www.transparenttextures.com/patterns/signal.png");
+  opacity: 0.6;
+}
+
+.song-info {
+  padding: 12px;
+  text-align: left;
+}
+
+.song-info h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: #ffffff;
+}
+
+.song-info p {
+  font-size: 0.85rem;
+  color: #ccc;
+  margin: 3px 0 8px 0;
+}
+
+.tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.tags span {
+  background: #383b4a;
+  border-radius: 10px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  color: #b5b9ff;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.tags span:hover {
+  background: #7b61ff;
+  color: #fff;
+}
+
+.bpm {
+  font-size: 0.8rem;
+  color: #9fa3c4;
+}
+
+/* ปุ่ม Play / Download */
+.song-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1b1c24;
+  padding: 8px 0;
+  gap: 12px;
+}
+
+.play-btn,
+.download-btn {
+  background: none;
+  border: none;
+  color: #b5b9ff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.play-btn:hover,
+.download-btn:hover {
+  color: #8a7cff;
+  transform: scale(1.1);
+}
+
+/* เส้นขั้นระหว่างปุ่ม */
+.divider {
+  width: 1px;
+  height: 16px;
+  background: #3a3a3a;
+}
+
+/* ปุ่มเลื่อนซ้ายขวา */
+.scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(80, 80, 120, 0.5);
+  border: none;
+  color: white;
+  font-size: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: background 0.3s;
+}
+
+.scroll-btn:hover {
+  background: rgba(120, 120, 200, 0.7);
+}
+
+.scroll-btn.left {
+  left: 20px;
+}
+
+.scroll-btn.right {
+  right: 20px;
+}
+
+/* จุดหน้า */
+.pagination-dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 25px;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #3a3a3a;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.dot.active {
+  background: #8a7cff;
+}
+
+.clear-filter {
+  margin-top: 15px;
+  background: #383b4a;
+  border: none;
+  padding: 8px 16px;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clear-filter:hover {
+  background: #7b61ff;
+}
