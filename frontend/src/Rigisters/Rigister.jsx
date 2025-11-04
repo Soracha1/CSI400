@@ -48,7 +48,7 @@ function Rigister() {
 
         <div className="i-login-text">
           Already have an account?{" "}
-          <a href="/login" className="i-Login">
+          <a href="/Login" className="i-Login">
             Log in
           </a>
         </div>
