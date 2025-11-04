@@ -37,18 +37,10 @@ input[type="text"], input[type="password"] {
     cursor: pointer;
 }
 
-.login-google button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    background-color: white;
-    color: black;
-}
-
 .register-links {
     margin-top: 10px;
     text-align: center;
+    font-size: 12px;
 }
 
 .password-section {
