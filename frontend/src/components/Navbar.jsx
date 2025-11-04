@@ -55,7 +55,9 @@ function Navbar() {
         <a href="/about" className="nav-link">เกี่ยวกับ</a>
         <a href="/profile" className="nav-link">Profile</a>
         <a href="/register" className="nav-link">ลงทะเบียน</a>
-        <a href="/login" className="login-button">เข้าสู่ระบบ</a>
+       <button class="gradient-login-button">
+  เข้าสู่ระบบ
+</button>
       </div>
     </header>
   );
