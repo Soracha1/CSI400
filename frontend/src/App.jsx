@@ -38,14 +38,14 @@ function App() {
       {/* <UploadSong /> */}
 
       {/*<Navbar />*/}
-       {/*<Login />*/} 
-       {/*<Rigister />*/}
+       {/* <Login />  */}
+       <Rigister />
       {/* <HeroSection /> */}
       {/* <EditProfile /> */}
       {/* <TrendingSounds /> */}
     
-       <UploadSong /> 
-      <SongList/>
+       {/* <UploadSong />  */}
+      {/* <SongList/> */}
   {/* <Footer /> */}
 
     </div>
