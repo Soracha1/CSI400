@@ -35,7 +35,7 @@ function EditProfile() {
                 avatarPreview ||
                 "https://via.placeholder.com/150?text=Avatar"
               }
-              alt="Avatar"
+              alt=""
             />
           </div>
           <label className="avatar-upload">
