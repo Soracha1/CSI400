@@ -7,8 +7,10 @@ function SongList() {
   const [favorites, setFavorites] = useState([]);
   const [currentPlaying, setCurrentPlaying] = useState(null);
   const [filterTag, setFilterTag] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0); // เพิ่ม state สำหรับหน้า
-  const songsPerPage = 5; // ✅ แสดง 5 เพลงต่อหน้า
+  const [currentPage, setCurrentPage] = useState(0);
+  const [durations, setDurations] = useState({}); // ✅ เก็บเวลาเพลง
+
+  const songsPerPage = 5;
 
   useEffect(() => {
     axios
@@ -52,6 +54,14 @@ function SongList() {
     }
   };
 
+  // ✅ ฟังก์ชันแปลงเวลาเป็น mm:ss
+  const formatTime = (seconds) => {
+    if (!seconds) return "…";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   const filteredSongs = filterTag
     ? songs.filter(
         (s) =>
@@ -61,7 +71,6 @@ function SongList() {
       )
     : songs;
 
-  // ✅ ตัดเพลงให้เหลือเฉพาะหน้า
   const totalPages = Math.ceil(filteredSongs.length / songsPerPage);
   const displayedSongs = filteredSongs.slice(
     currentPage * songsPerPage,
@@ -77,24 +86,17 @@ function SongList() {
       <div className="song-grid">
         {displayedSongs.map((song) => (
           <div className="song-box" key={song._id}>
-            {/* หัวใจ Favorite */}
-            <div
-              className="heart-icon"
-              onClick={() => toggleFavorite(song._id)}
-            >
+            <div className="heart-icon" onClick={() => toggleFavorite(song._id)}>
               {favorites.includes(song._id) ? "💖" : "🤍"}
             </div>
 
-            {/* Waveform */}
             <div className="waveform"></div>
 
-            {/* ชื่อเพลง / ศิลปิน */}
             <div className="song-info">
               <h3 className="song-title">{song.title}</h3>
               <p className="song-artist">{song.artist}</p>
             </div>
 
-            {/* TAG */}
             <div className="song-tags">
               <span onClick={() => setFilterTag(song.type)}>#{song.type}</span>
               <span onClick={() => setFilterTag(song.subtype)}>
@@ -102,20 +104,14 @@ function SongList() {
               </span>
             </div>
 
-            {/* เวลา + BPM */}
             <div className="song-meta">
-              <span className="duration">
-                ⏱ {Math.floor(Math.random() * 50) + 10}.s
-              </span>
+              {/* ✅ ใช้เวลา Duration จริง */}
+              <span className="duration">⏱ {formatTime(durations[song._id])}</span>
               <span className="bpm">{song.bpm} BPM</span>
             </div>
 
-            {/* ปุ่ม Play + Download */}
             <div className="song-controls">
-              <button
-                className="play-btn"
-                onClick={() => togglePlay(song._id)}
-              >
+              <button className="play-btn" onClick={() => togglePlay(song._id)}>
                 {currentPlaying === song._id ? "⏸" : "▶"}
               </button>
 
@@ -127,15 +123,18 @@ function SongList() {
               </button>
             </div>
 
+            {/* ✅ เก็บเวลาเมื่อโหลด metadata */}
             <audio
               id={`audio-${song._id}`}
               src={`http://localhost:5000/${song.filePath}`}
+              onLoadedMetadata={(e) =>
+                setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
+              }
             />
           </div>
         ))}
       </div>
 
-      {/* ✅ จุดเลื่อนหน้า (Pagination Dots) */}
       {totalPages > 1 && (
         <div className="pagination-dots">
           {Array.from({ length: totalPages }).map((_, index) => (

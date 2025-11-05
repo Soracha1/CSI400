@@ -1,4 +1,8 @@
 /* Navbar ติดบนสุด */
+body {
+  padding-top: 90px;
+}
+
 .header {
   position: fixed;
   top: 0;

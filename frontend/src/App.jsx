@@ -19,34 +19,25 @@ function App() {
       
 
       <Navbar />
-      {/* <Login /> */}
-       {/*<Rigister />*/}
-      {/* <HeroSection /> */}
+
       {/* <TrendingSounds /> */}
-      {/* <UploadSong /> */}
-      {/* <SongList/> */}
+
       {/* <Footer /> */}
 
       {/* <Navbar /> */}
       {/* <Login /> */}
-      {/* <Rigister /> */}
+
       {/* <Profile /> */}
-      {/* <HeroSection />
 
-      <TrendingSounds />
-      <Footer /> */}
-      {/* <UploadSong /> */}
 
-      {/*<Navbar />*/}
        {/* <Login />  */}
-       <Rigister />
+       {/* <Rigister /> */}
       {/* <HeroSection /> */}
       {/* <EditProfile /> */}
-      {/* <TrendingSounds /> */}
     
-       {/* <UploadSong />  */}
+       <UploadSong />
       {/* <SongList/> */}
-  {/* <Footer /> */}
+  <Footer />
 
     </div>
   );

@@ -7,52 +7,41 @@ function HeroSection() {
   const [tags, setTags] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 🔹 โหลด tag จาก backend
   useEffect(() => {
     axios
-      .get("http://localhost:5000/api/tags") // ← ปรับตาม endpoint ของคุณ
+      .get("http://localhost:5000/api/tags")
       .then((res) => setTags(res.data))
       .catch((err) => console.error("Error fetching tags:", err));
   }, []);
 
-  // 🔹 เมื่อกดปุ่มค้นหา
   const handleSearch = () => {
     if (searchTerm.trim() === "") return;
     window.location.href = `/songs?search=${encodeURIComponent(searchTerm)}`;
   };
 
-  // 🔹 เมื่อกด tag
   const handleTagClick = (tag) => {
     window.location.href = `/songs?tag=${encodeURIComponent(tag)}`;
   };
 
   return (
-    <div
-      className="hero"
-      style={{ backgroundImage: `url(${hero})` }}
-    >
-      <div className="overlay"></div>
-
+    <section className="hero-section" style={{ backgroundImage: `url(${hero})` }}>
       <div className="hero-content">
         <h1>The easiest way to find the perfect audio sample</h1>
 
-        {/* 🔹 ช่องค้นหา */}
-        <div className="search-bar">
-         
-          <input
-            type="text"
-            placeholder="Search your sound..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
-           <button className="search-icon" onClick={handleSearch}>
-            🔍
-          </button>
+        <div className="search-box">
+          <button className="search-btn" onClick={handleSearch}>🔍</button>
+         <input
+  className="search-input"
+  type="search"
+  placeholder="Search..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+/>
+
         </div>
 
-        {/* 🔹 Tag จาก backend */}
-        <div className="tags">
+        <div className="tag-container">
           {tags.length > 0 ? (
             tags.map((tag, index) => (
               <span key={index} onClick={() => handleTagClick(tag.name || tag)}>
@@ -65,8 +54,8 @@ function HeroSection() {
         </div>
       </div>
 
-      <div className="blue-line"></div>
-    </div>
+      <div className="bottom-gradient"></div>
+    </section>
   );
 }
 
