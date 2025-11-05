@@ -5,30 +5,150 @@ import multer from "multer";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+// =============================
+// ⚙️ Middleware & Config
+// =============================
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-// --- MongoDB connection ---
+// =============================
+// 💾 MongoDB
+// =============================
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// --- Music folder ---
+// =============================
+// 👤 USER SYSTEM
+// =============================
+const userSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+  password: String,
+  googleId: String,
+});
+const User = mongoose.model("User", userSchema);
+
+// --- Register ---
+app.post("/api/register", async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const existing = await User.findOne({ email });
+    if (existing)
+      return res.status(400).json({ message: "Email already registered" });
+
+    const hash = await bcrypt.hash(password, 10);
+    const newUser = await User.create({ username, email, password: hash });
+    res.json({ message: "Register success", user: newUser });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Login ---
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(400).json({ message: "Invalid password" });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    res.json({ message: "Login success", token, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================
+// 🔐 PASSPORT + GOOGLE AUTH
+// =============================
+app.use(
+  session({
+    secret: process.env.JWT_SECRET || "mySecretKey",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:5000/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ googleId: profile.id });
+        if (!user) {
+          user = await User.create({
+            username: profile.displayName,
+            email: profile.emails?.[0]?.value,
+            googleId: profile.id,
+          });
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  )
+);
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id, done) => {
+  const user = await User.findById(id);
+  done(null, user);
+});
+
+app.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/" }),
+  (req, res) => {
+    res.redirect("http://localhost:3000/dashboard");
+  }
+);
+
+// =============================
+// 🎵 SONG SYSTEM
+// =============================
 const musicPath = path.join("uploads/music");
 if (!fs.existsSync(musicPath)) fs.mkdirSync(musicPath, { recursive: true });
 
-// --- Multer setup ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, musicPath),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
-// --- Mongoose Schema ---
 const songSchema = new mongoose.Schema({
   title: String,
   artist: String,
@@ -41,10 +161,9 @@ const songSchema = new mongoose.Schema({
   filePath: String,
   createdAt: { type: Date, default: Date.now },
 });
-
 const Song = mongoose.model("Song", songSchema);
 
-// --- Upload song route ---
+// --- Upload song ---
 app.post("/api/upload", upload.single("music"), async (req, res) => {
   try {
     const { title, artist, description, bpm, key, mode, type, subtype } =
@@ -80,6 +199,8 @@ app.get("/api/songs", async (req, res) => {
 // --- Serve music files ---
 app.use("/uploads/music", express.static("uploads/music"));
 
-// --- Start server ---
+// =============================
+// 🚀 START SERVER
+// =============================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
