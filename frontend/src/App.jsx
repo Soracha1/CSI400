@@ -20,14 +20,14 @@ function App() {
       <Navbar />
       {/* <Login /> */}
       {/* <Rigister /> */}
-      {/* <Profile /> */}
-      {/* <HeroSection />
+      <Profile />
+      {/* <HeroSection /> */}
 
-      <TrendingSounds />
+      {/* <TrendingSounds /> */}
       <Footer />
       {/* <UploadSong /> */}
-{/* 
-      <Navbar /> */}
+
+     {/*  <Navbar /> */}
        {/* <Login />  */}
        {/*<Rigister />*/}
       {/* <HeroSection /> */}

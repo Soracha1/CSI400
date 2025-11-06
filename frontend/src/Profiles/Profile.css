@@ -2,7 +2,7 @@
 .profile-container {
   background-color: #343A4A;
   min-height: 100vh;
-    padding: 200px;
+    padding: 20px;
   font-family: "Poppins", sans-serif;
   color: white;
 }
@@ -11,7 +11,8 @@
 .profile-header {
   background: linear-gradient(to bottom, #66b3ff, #3399ff);
   height: 295px;
-  width: 1980px;
+  width: 110%;
+  margin-left: -20px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -22,6 +23,7 @@
 /* กล่องข้อมูลโปรไฟล์ */
 .profile-info {
   text-align: center;
+  margin-right : 120px;
   
 }
 
@@ -29,11 +31,13 @@
 .profile-avatar {
   position: relative;
   display: inline-block;
+  
 }
 
 .profile-avatar img {
   width: 80px;
   height: 80px;
+
   border-radius: 50%;
   border: 3px solid white;
   object-fit: cover;
@@ -95,7 +99,7 @@
   width: 700px;
   height: 20px;
   margin-top: 20px;
-  margin-left: 650px;
+  margin-left: 400px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -135,5 +139,6 @@
   color: #e5e7eb;
   font-size: 14px;
   text-align: center;
+ 
 
 }
