@@ -5,19 +5,9 @@ import "./upload.css";
 const keyOptions = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const modeOptions = ["Major", "Minor", "None"];
 const typeOptions = [
-  "bass",
-  "guitar",
-  "drums",
-  "pad & atmosphere",
-  "synthesizers",
-  "keys",
-  "vocals",
-  "bowed string",
-  "brass",
-  "field recordings",
-  "plucked string",
-  "sound effects",
-  "woodwinds",
+  "bass", "guitar", "drums", "pad & atmosphere", "synthesizers", "keys", "vocals",
+  "bowed string", "brass", "field recordings", "plucked string",
+  "sound effects", "woodwinds"
 ];
 const subtypeOptions = {
   bass: ["analog synth bass", "bass line", "digital synth bass", "distorted bass", "fingered bass", "picked bass", "slapped bass", "sub bass", "upright bass"],
@@ -32,25 +22,28 @@ const subtypeOptions = {
   vocals: ["acappella", "singing", "spoken", "vocal fx"],
   woodwinds: ["bagpipes", "bassoon", "clarinet", "flute", "oboe", "ocarina", "piccolo", "recorder", "saxophone", "synth woodwind", "other winds"],
 };
+const tagOptions = ["Bittersweet", "Calm", "Chilled", "Confident", "Relaxed", "Romantic", "Seductive", "Serious", "Cool", "R B", "Flowing", "Groovy", "Electric Guitar", "Electronic Drums", "Percussion", "Piano", "Synth", "Male"];
 
 function UploadSong() {
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [description, setDescription] = useState("");
-  const [genre, setGenre] = useState("");
-  const [mood, setMood] = useState("");
-  const [tags, setTags] = useState("");
-  const [bpm, setBpm] = useState("");
-  const [key, setKey] = useState("C");
-  const [mode, setMode] = useState("None");
-  const [type, setType] = useState(typeOptions[0]);
-  const [subtype, setSubtype] = useState(subtypeOptions[typeOptions[0]][0]);
+  const [form, setForm] = useState({
+    title: "",
+    artist: "",
+    description: "",
+    tags: "",
+    bpm: "",
+    key: "C",
+    mode: "None",
+    type: typeOptions[0],
+    subtype: subtypeOptions[typeOptions[0]][0],
+    soundType: "Loop",
+  });
   const [file, setFile] = useState(null);
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleTypeChange = (e) => {
     const newType = e.target.value;
-    setType(newType);
-    setSubtype(subtypeOptions[newType]?.[0] || "");
+    setForm({ ...form, type: newType, subtype: subtypeOptions[newType]?.[0] || "" });
   };
 
   const handleUpload = async (e) => {
@@ -58,35 +51,27 @@ function UploadSong() {
     if (!file) return alert("กรุณาเลือกไฟล์เพลงก่อน!");
 
     const formData = new FormData();
-    formData.append("title", title);
-    formData.append("artist", artist);
-    formData.append("description", description);
-    formData.append("genre", genre);
-    formData.append("mood", mood);
-    formData.append("tags", tags);
-    formData.append("bpm", bpm);
-    formData.append("key", key);
-    formData.append("mode", mode);
-    formData.append("type", type);
-    formData.append("subtype", subtype);
+    Object.keys(form).forEach((k) => formData.append(k, form[k]));
     formData.append("music", file);
 
     try {
-      await axios.post("http://localhost:5000/api/upload", formData, {
+      const res = await axios.post("http://localhost:5000/api/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       alert("✅ อัปโหลดเพลงสำเร็จ!");
-      setTitle("");
-      setArtist("");
-      setDescription("");
-      setGenre("");
-      setMood("");
-      setTags("");
-      setBpm("");
-      setKey("C");
-      setMode("None");
-      setType(typeOptions[0]);
-      setSubtype(subtypeOptions[typeOptions[0]][0]);
+      // reset
+      setForm({
+        title: "",
+        artist: "",
+        description: "",
+        tags: "",
+        bpm: "",
+        key: "C",
+        mode: "None",
+        type: typeOptions[0],
+        subtype: subtypeOptions[typeOptions[0]][0],
+        soundType: "Loop",
+      });
       setFile(null);
     } catch (err) {
       console.error(err);
@@ -98,7 +83,6 @@ function UploadSong() {
     <div className="upload-container">
       <h2 className="upload-title">UPLOAD SOUND</h2>
       <form className="upload-form" onSubmit={handleUpload}>
-        {/* LEFT SIDE */}
         <div className="upload-left">
           <label className="file-upload-box">
             <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files[0])} />
@@ -106,78 +90,66 @@ function UploadSong() {
           </label>
         </div>
 
-        {/* RIGHT SIDE */}
         <div className="upload-right">
           <div className="form-row">
             <div className="form-group">
               <label>ชื่อเพลง</label>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" required />
+              <input name="title" value={form.title} onChange={handleChange} placeholder="Song title" required />
             </div>
             <div className="form-group">
               <label>ศิลปิน</label>
-              <input type="text" value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Artist name" required />
+              <input name="artist" value={form.artist} onChange={handleChange} placeholder="Artist name" required />
             </div>
           </div>
 
           <div className="form-group">
             <label>รายละเอียด</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description" />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>แนวเพลง (Genre)</label>
-              <input type="text" value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="e.g. Pop, EDM" />
-            </div>
-            <div className="form-group">
-              <label>อารมณ์เพลง (Mood)</label>
-              <input type="text" value={mood} onChange={(e) => setMood(e.target.value)} placeholder="e.g. Chill, Happy" />
+          <div className="form-group">
+            <label>ประเภทซาวด์</label>
+            <div className="radio-group">
+              <label><input type="radio" name="soundType" value="Loop" checked={form.soundType === "Loop"} onChange={handleChange} /> Loop</label>
+              <label><input type="radio" name="soundType" value="One Shot" checked={form.soundType === "One Shot"} onChange={handleChange} /> One Shot</label>
             </div>
           </div>
 
           <div className="form-group">
             <label>แท็ก (Tags)</label>
-            <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="เช่น chill, night, loop" />
+            <select name="tags" value={form.tags} onChange={handleChange}>
+              <option value="">-- เลือก Tag --</option>
+              {tagOptions.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+            </select>
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label>BPM</label>
-              <input type="number" value={bpm} onChange={(e) => setBpm(e.target.value)} placeholder="BPM" />
+              <input name="bpm" type="number" value={form.bpm} onChange={handleChange} placeholder="BPM" />
             </div>
+
             <div className="form-group">
               <label>KEY</label>
-              <select value={key} onChange={(e) => setKey(e.target.value)}>
-                {keyOptions.map((k) => (
-                  <option key={k}>{k}</option>
-                ))}
-              </select>
+              <select name="key" value={form.key} onChange={handleChange}>{keyOptions.map((k) => <option key={k}>{k}</option>)}</select>
             </div>
+
             <div className="form-group">
               <label>MODE</label>
-              <select value={mode} onChange={(e) => setMode(e.target.value)}>
-                {modeOptions.map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
-              </select>
+              <select name="mode" value={form.mode} onChange={handleChange}>{modeOptions.map((m) => <option key={m}>{m}</option>)}</select>
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label>ประเภท (Type)</label>
-              <select value={type} onChange={handleTypeChange}>
-                {typeOptions.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
+              <select value={form.type} onChange={handleTypeChange}>{typeOptions.map((t) => <option key={t}>{t}</option>)}</select>
             </div>
+
             <div className="form-group">
               <label>ชนิดย่อย (Subtype)</label>
-              <select value={subtype} onChange={(e) => setSubtype(e.target.value)}>
-                {(subtypeOptions[type] || []).map((st) => (
-                  <option key={st}>{st}</option>
-                ))}
+              <select name="subtype" value={form.subtype} onChange={handleChange}>
+                {(subtypeOptions[form.type] || []).map((st) => <option key={st}>{st}</option>)}
               </select>
             </div>
           </div>

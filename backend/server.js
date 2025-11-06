@@ -1,3 +1,4 @@
+// server.js (ES module style)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -13,10 +14,9 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 dotenv.config();
 const app = express();
+const __dirname = path.resolve(); // for ESM
 
-// =============================
-// ⚙️ Middleware & Config
-// =============================
+// Middleware
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://localhost:5173"],
@@ -25,17 +25,13 @@ app.use(
 );
 app.use(express.json());
 
-// =============================
-// 💾 MongoDB
-// =============================
+// MongoDB
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// =============================
-// 👤 USER SYSTEM
-// =============================
+// User model
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
@@ -44,13 +40,12 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", userSchema);
 
-// --- Register ---
+// Register
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
     const existing = await User.findOne({ email });
-    if (existing)
-      return res.status(400).json({ message: "Email already registered" });
+    if (existing) return res.status(400).json({ message: "Email already registered" });
 
     const hash = await bcrypt.hash(password, 10);
     const newUser = await User.create({ username, email, password: hash });
@@ -60,7 +55,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// --- Login ---
+// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -70,7 +65,7 @@ app.post("/api/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid password" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", {
       expiresIn: "7d",
     });
     res.json({ message: "Login success", token, user });
@@ -79,9 +74,7 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// =============================
-// 🔐 PASSPORT + GOOGLE AUTH
-// =============================
+// Passport Google (optional)
 app.use(
   session({
     secret: process.env.JWT_SECRET || "mySecretKey",
@@ -89,7 +82,6 @@ app.use(
     saveUninitialized: false,
   })
 );
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -124,11 +116,7 @@ passport.deserializeUser(async (id, done) => {
   done(null, user);
 });
 
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
-
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
@@ -137,14 +125,14 @@ app.get(
   }
 );
 
-// =============================
-// 🎵 SONG SYSTEM
-// =============================
-const musicPath = path.join("uploads/music");
-if (!fs.existsSync(musicPath)) fs.mkdirSync(musicPath, { recursive: true });
+// =========================
+// SONG model + multer
+// =========================
+const uploadsDir = path.join(__dirname, "uploads", "music");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, musicPath),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
@@ -158,35 +146,45 @@ const songSchema = new mongoose.Schema({
   mode: String,
   type: String,
   subtype: String,
-  filePath: String,
+  tags: String,
+  soundType: String,
+  filePath: String, // store relative path like "uploads/music/1234-song.mp3"
+  likes: { type: Number, default: 0 },
+  downloads: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 const Song = mongoose.model("Song", songSchema);
 
-// --- Upload song ---
+// Upload song
 app.post("/api/upload", upload.single("music"), async (req, res) => {
   try {
-    const { title, artist, description, bpm, key, mode, type, subtype } =
-      req.body;
+    if (!req.file) return res.status(400).json({ message: "No music file uploaded" });
+
+    // save relative path that matches static serving below
+    const relativePath = path.join("uploads", "music", req.file.filename).replace(/\\/g, "/");
+
     const newSong = await Song.create({
-      title,
-      artist,
-      description,
-      bpm: Number(bpm),
-      key,
-      mode,
-      type,
-      subtype,
-      filePath: req.file.path,
+      title: req.body.title || "",
+      artist: req.body.artist || "",
+      description: req.body.description || "",
+      bpm: req.body.bpm ? Number(req.body.bpm) : undefined,
+      key: req.body.key || "",
+      mode: req.body.mode || "",
+      type: req.body.type || "",
+      subtype: req.body.subtype || "",
+      tags: req.body.tags || "",
+      soundType: req.body.soundType || "",
+      filePath: relativePath,
     });
-    res.json(newSong);
+
+    res.json({ message: "Upload success", song: newSong });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Get all songs ---
+// Get all songs
 app.get("/api/songs", async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });
@@ -196,11 +194,47 @@ app.get("/api/songs", async (req, res) => {
   }
 });
 
-// --- Serve music files ---
-app.use("/uploads/music", express.static("uploads/music"));
+// Serve static files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// =============================
-// 🚀 START SERVER
-// =============================
+// Like song (increment)
+app.post("/api/songs/:id/like", async (req, res) => {
+  try {
+    const song = await Song.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Download increment
+app.post("/api/songs/:id/download", async (req, res) => {
+  try {
+    const song = await Song.findByIdAndUpdate(req.params.id, { $inc: { downloads: 1 } }, { new: true });
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Top lists
+app.get("/api/songs/top-likes", async (req, res) => {
+  try {
+    const songs = await Song.find().sort({ likes: -1 }).limit(5);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/api/songs/top-downloads", async (req, res) => {
+  try {
+    const songs = await Song.find().sort({ downloads: -1 }).limit(5);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));

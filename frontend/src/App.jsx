@@ -20,12 +20,12 @@ function App() {
       <Navbar />
       {/* <Login /> */}
       {/* <Rigister /> */}
-      <Profile />
-      {/* <HeroSection /> */}
+      {/* <Profile /> */}
+      <HeroSection />
 
       {/* <TrendingSounds /> */}
-      <Footer />
-      {/* <UploadSong /> */}
+
+      <UploadSong />
 
      {/*  <Navbar /> */}
        {/* <Login />  */}
@@ -35,7 +35,8 @@ function App() {
       {/* <TrendingSounds /> */}
       {/* <Footer /> */}
        {/* <UploadSong />  */}
-      {/* <SongList/> */}
+      <SongList/>
+            <Footer />
 
     </div>
   );
