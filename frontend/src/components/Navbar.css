@@ -1,26 +1,29 @@
 /* Navbar ติดบนสุด */
-
+body {
+  padding-top: 90px;
+}
 
 .header {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 100%; /* ให้เต็มความกว้างจอ */
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* จัดโลโก้ชิดซ้าย, เมนูชิดขวา */
   align-items: center;
-  padding: 10px 60px;
+  padding: 15px 8%; /* 🔽 ปรับ Padding ด้านบน/ล่าง และ ซ้าย/ขวา (8% ทำให้ responsive) */
   background-color: #0A071E;
   color: white;
   font-family: "Poppins", sans-serif;
   z-index: 999;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-sizing: border-box; /* ⭐ เพิ่ม: เพื่อให้ padding ไม่ขยายความกว้างเกิน 100% */
 }
 
 /* โลโก้ */
 .logo {
-  height: 65px;
-  margin-left: 200px;   /* 🔽 เดิม 120px → ลดลงให้เข้าใกล้ตรงกลาง */
+  height: 60px; /* 🔽 ปรับลดความสูงเล็กน้อย (เดิม 65px) */
+  /* margin-left: 200px;  (ลบออก ❌) - ให้ .header คุมระยะห่างแทน */
   cursor: pointer;
   transition: transform 0.3s;
 }
@@ -33,8 +36,8 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 50px;
-  margin-right: 200px;  /* 🔽 เดิม 120px → ลดลงให้ขยับเข้าหาโลโก้ */
+  gap: 40px; /* 🔽 ปรับลดช่องว่าง (เดิม 50px) */
+  /* margin-right: 200px; (ลบออก ❌) - ให้ .header คุมระยะห่างแทน */
 }
 
 /* ลิงก์เมนู */
@@ -85,5 +88,39 @@
 
 /* ปรับ body ไม่ให้เนื้อหาถูก Navbar ทับ */
 body {
-  padding-top: 90px;
+  /* 🔽 คำนวณความสูงของ Navbar: 60px (logo) + 15px*2 (padding) = 90px */
+  padding-top: 90px; 
+}
+.gradient-login-button {
+  /* --- 1. การตกแต่งพื้นฐาน --- */
+  display: inline-block; /* ทำให้ padding ใช้งานได้ถูกต้อง */
+  padding: 12px 30px; /* ปรับขนาด (สูง 12px, กว้าง 30px) */
+  border: none; /* ลบเส้นขอบ */
+  border-radius: 30px; /* ทำให้ขอบมนเป็นทรงแคปซูล */
+  
+  /* --- 2. การตกแต่งตัวอักษร --- */
+  font-family: "Poppins", sans-serif; /* (แนะนำให้ใช้ font เดียวกับเว็บของคุณ) */
+  color: white;
+  font-size: 16px;
+  font-weight: 600; /* ตัวหนาเล็กน้อย */
+  text-decoration: none; /* ลบเส้นใต้ลิงก์ */
+  text-align: center;
+  white-space: nowrap; /* ป้องกันปุ่มแตกเมื่อจอเล็ก */
+
+  /* --- 3. หัวใจหลัก: การไล่สี (Gradient) --- */
+  background: linear-gradient(
+    90deg, 
+    #00c6ff 0%,  /* สีซ้าย (สีฟ้าสว่าง) */
+    #0072ff 100% /* สีขวา (สีน้ำเงินเข้ม) */
+  );
+
+  /* --- 4. เอฟเฟกต์ตอนใช้งาน --- */
+  cursor: pointer;
+  transition: all 0.3s ease; /* ทำให้การเปลี่ยนแปลงนุ่มนวล */
+}
+
+/* --- 5. เอฟเฟกต์เมื่อเอาเมาส์ชี้ (Hover) --- */
+.gradient-login-button:hover {
+  transform: scale(1.05); /* ขยายปุ่มเล็กน้อย */
+  box-shadow: 0 4px 15px rgba(0, 150, 255, 0.4); /* เพิ่มเงาฟุ้งๆ สีฟ้า */
 }

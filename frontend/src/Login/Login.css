@@ -94,13 +94,6 @@ body, html {
     margin: 0;
 }
 
-#root, .App {
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #2C3240; /* ใส่สีพื้นหลังถ้าต้องการ */
-}
 
 
 
