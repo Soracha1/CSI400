@@ -13,10 +13,11 @@ function Profile() {
         <div className="profile-info">
           <div className="profile-avatar">
             <img
-              src="https://i.pinimg.com/736x/22/44/2a/22442af0fdfb0e09a62c3d08046232e7.jpg"
-              alt="avatar"
+              src="/src/assets/logo.png"
             />
-            <div className="edit-icon">✏️</div>
+            <div className="edit-icon">✏️
+              
+            </div>
           </div>
           <h2 className="profile-name">Name</h2>
           <p className="profile-username">Bio Noname</p>
@@ -24,7 +25,7 @@ function Profile() {
           <div className="profile-social">
             <a href="#"><FaFacebook /></a>
             <a href="#"><FaInstagram /></a>
-            <a href="#"><SiTiktok /></a>
+            <a href="https://www.tiktok.com/"><SiTiktok /></a>
           </div>
         </div>
       </div>

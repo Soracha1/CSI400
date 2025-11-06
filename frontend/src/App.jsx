@@ -17,26 +17,26 @@ function App() {
   return (
     <div>
       
- HEAD
+ 
       <Navbar />
       {/* <Login /> */}
-      <Rigister />
+      {/* <Rigister /> */}
       {/* <Profile /> */}
       {/* <HeroSection />
 
       <TrendingSounds />
-      <Footer /> */}
+      <Footer />
       {/* <UploadSong /> */}
-
-      {/*<Navbar />*/}
-       {/*<Login />*/} 
+{/* 
+      <Navbar /> */}
+       {/* <Login />  */}
        {/*<Rigister />*/}
       {/* <HeroSection /> */}
       {/* <EditProfile /> */}
       {/* <TrendingSounds /> */}
       {/* <Footer /> */}
-       {/*<UploadSong />*/} 
-      {/*<SongList/>*/}
+       {/* <UploadSong />  */}
+      {/* <SongList/> */}
 
     </div>
   );
