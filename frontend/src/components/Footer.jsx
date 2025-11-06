@@ -13,6 +13,8 @@ function Footer() {
         <span>|</span>
         <a href="/qa">Q&A</a>
         <span>|</span>
+         <a href="/help">About</a>
+        <span>|</span>
         <a href="/contact">Contact</a>
       </div>
 
