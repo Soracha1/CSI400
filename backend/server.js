@@ -238,3 +238,43 @@ app.get("/api/songs/top-downloads", async (req, res) => {
 // start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+
+// =========================
+// TAGS ดึงแท็กทั้งหมด
+app.get("/api/tags", async (req, res) => {
+  try {
+    const tags = await Song.find().distinct("tags");
+    res.json(tags.filter((t) => t && t.trim() !== ""));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// =========================
+// SEARCH endpoint
+app.get("/api/songs/search", async (req, res) => {
+  try {
+    const { q, tag } = req.query;
+
+    let query = {};
+
+    if (q) {
+      query = {
+        $or: [
+          { title: { $regex: q, $options: "i" } },
+          { artist: { $regex: q, $options: "i" } },
+          { description: { $regex: q, $options: "i" } },
+          { tags: { $regex: q, $options: "i" } },
+        ],
+      };
+    }
+
+    if (tag) {
+      query = { tags: tag };
+    }
+
+    const songs = await Song.find(query);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

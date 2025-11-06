@@ -28,24 +28,25 @@ function HeroSection() {
       <div className="hero-content">
         <h1>The easiest way to find the perfect audio sample</h1>
 
+   
         <div className="search-box">
           <button className="search-btn" onClick={handleSearch}>🔍</button>
-         <input
-  className="search-input"
-  type="search"
-  placeholder="Search..."
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value)}
-  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-/>
-
+          <input
+            className="search-input"
+            type="search"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
         </div>
 
+        {/* ✅ แสดง Tag แยกต่างหาก */}
         <div className="tag-container">
           {tags.length > 0 ? (
             tags.map((tag, index) => (
-              <span key={index} onClick={() => handleTagClick(tag.name || tag)}>
-                #{tag.name || tag}
+              <span key={index} onClick={() => handleTagClick(tag)}>
+                #{tag}
               </span>
             ))
           ) : (

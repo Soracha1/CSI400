@@ -25,7 +25,7 @@ function App() {
 
       {/* <TrendingSounds /> */}
 
-      <UploadSong />
+      {/* <UploadSong /> */}
 
      {/*  <Navbar /> */}
        {/* <Login />  */}
