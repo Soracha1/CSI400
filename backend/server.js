@@ -16,6 +16,7 @@ dotenv.config();
 const app = express();
 const __dirname = path.resolve(); // for ESM
 
+
 // Middleware
 app.use(
   cors({
@@ -146,13 +147,14 @@ const songSchema = new mongoose.Schema({
   mode: String,
   type: String,
   subtype: String,
-  tags: String,
+  tags: [String], // ✅ เปลี่ยนเป็น Array
   soundType: String,
-  filePath: String, // store relative path like "uploads/music/1234-song.mp3"
+  filePath: String,
   likes: { type: Number, default: 0 },
   downloads: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
+
 const Song = mongoose.model("Song", songSchema);
 
 // Upload song
@@ -278,3 +280,4 @@ app.get("/api/songs/search", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+

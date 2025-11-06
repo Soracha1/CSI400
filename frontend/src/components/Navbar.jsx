@@ -52,11 +52,11 @@ function Navbar() {
 
         {/* เมนูทางขวา */}
         <a href="/premium" className="nav-link">Premium</a>
-        <a href="/about" className="nav-link">เกี่ยวกับ</a>
+        <a href="/about" className="nav-link">Notification</a>
         <a href="/profile" className="nav-link">Profile</a>
-        <a href="/register" className="nav-link">ลงทะเบียน</a>
+        <a href="/register" className="nav-link">Sing-in</a>
        <button class="gradient-login-button">
-  เข้าสู่ระบบ
+  Log-In
 </button>
       </div>
     </header>

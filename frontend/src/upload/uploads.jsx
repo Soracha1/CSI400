@@ -29,7 +29,7 @@ function UploadSong() {
     title: "",
     artist: "",
     description: "",
-    tags: "",
+    tags: [], // ← เปลี่ยนเป็น array
     bpm: "",
     key: "C",
     mode: "None",
@@ -37,9 +37,15 @@ function UploadSong() {
     subtype: subtypeOptions[typeOptions[0]][0],
     soundType: "Loop",
   });
+
   const [file, setFile] = useState(null);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleTagsChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+    setForm({ ...form, tags: selected });
+  };
 
   const handleTypeChange = (e) => {
     const newType = e.target.value;
@@ -49,22 +55,21 @@ function UploadSong() {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return alert("กรุณาเลือกไฟล์เพลงก่อน!");
+    if (form.tags.length < 4) return alert("กรุณาเลือก Tag อย่างน้อย 4 อัน");
 
     const formData = new FormData();
-    Object.keys(form).forEach((k) => formData.append(k, form[k]));
+    Object.keys(form).forEach((k) => formData.append(k, Array.isArray(form[k]) ? JSON.stringify(form[k]) : form[k]));
     formData.append("music", file);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await axios.post("http://localhost:5000/api/upload", formData);
       alert("✅ อัปโหลดเพลงสำเร็จ!");
-      // reset
+
       setForm({
         title: "",
         artist: "",
         description: "",
-        tags: "",
+        tags: [],
         bpm: "",
         key: "C",
         mode: "None",
@@ -73,6 +78,7 @@ function UploadSong() {
         soundType: "Loop",
       });
       setFile(null);
+
     } catch (err) {
       console.error(err);
       alert("❌ อัปโหลดไม่สำเร็จ");
@@ -94,17 +100,17 @@ function UploadSong() {
           <div className="form-row">
             <div className="form-group">
               <label>ชื่อเพลง</label>
-              <input name="title" value={form.title} onChange={handleChange} placeholder="Song title" required />
+              <input name="title" value={form.title} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label>ศิลปิน</label>
-              <input name="artist" value={form.artist} onChange={handleChange} placeholder="Artist name" required />
+              <input name="artist" value={form.artist} onChange={handleChange} required />
             </div>
           </div>
 
           <div className="form-group">
             <label>รายละเอียด</label>
-            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description" />
+            <textarea name="description" value={form.description} onChange={handleChange} />
           </div>
 
           <div className="form-group">
@@ -116,17 +122,35 @@ function UploadSong() {
           </div>
 
           <div className="form-group">
-            <label>แท็ก (Tags)</label>
-            <select name="tags" value={form.tags} onChange={handleChange}>
-              <option value="">-- เลือก Tag --</option>
-              {tagOptions.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-            </select>
-          </div>
+  <label>แท็ก (Tags) — เลือกขั้นต่ำ 4</label>
+  <div className="tags-container">
+    {tagOptions.map((tag) => (
+      <button
+        type="button"
+        key={tag}
+        className={`tag-btn ${form.tags.includes(tag) ? "active" : ""}`}
+        onClick={() => {
+          let updatedTags = [...form.tags];
+          if (updatedTags.includes(tag)) {
+            updatedTags = updatedTags.filter((t) => t !== tag);
+          } else {
+            updatedTags.push(tag);
+          }
+          setForm({ ...form, tags: updatedTags });
+        }}
+      >
+        {tag}
+      </button>
+    ))}
+  </div>
+  <p className="tag-hint">เลือกแล้ว {form.tags.length} / ขั้นต่ำ 4</p>
+</div>
+
 
           <div className="form-row">
             <div className="form-group">
               <label>BPM</label>
-              <input name="bpm" type="number" value={form.bpm} onChange={handleChange} placeholder="BPM" />
+              <input name="bpm" type="number" value={form.bpm} onChange={handleChange} />
             </div>
 
             <div className="form-group">

@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./SongList.css";
 
-
-function SongList() {
+function SongList({ searchTerm }) {
   const [songs, setSongs] = useState([]);
   const [topLikes, setTopLikes] = useState([]);
   const [topDownloads, setTopDownloads] = useState([]);
@@ -17,6 +16,15 @@ function SongList() {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, filterTag]);
+
+  // ✅ เมื่อมีการค้นหาใหม่ → ปิด filterTag ทันที → ให้ข้อมูลแสดง
+  useEffect(() => {
+    setFilterTag(null);
+  }, [searchTerm]);
 
   const loadAllData = async () => {
     try {
@@ -35,8 +43,9 @@ function SongList() {
 
   const handleLike = async (id) => {
     try {
-      // optimistic UI toggle local favorites for UX
-      setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
+      setFavorites((prev) =>
+        prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+      );
       await axios.post(`http://localhost:5000/api/songs/${id}/like`);
       loadAllData();
     } catch (err) {
@@ -47,7 +56,6 @@ function SongList() {
   const handleDownload = async (song) => {
     try {
       const link = document.createElement("a");
-      // song.filePath is like "uploads/music/xxxxx.mp3"
       link.href = `http://localhost:5000/${song.filePath}`;
       link.download = `${song.title}.mp3`;
       link.click();
@@ -88,17 +96,34 @@ function SongList() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const filteredSongs = filterTag ? songs.filter((s) => s.type === filterTag || s.subtype === filterTag || s.artist === filterTag) : songs;
+  let filteredSongs = songs;
+
+  if (searchTerm && searchTerm.trim() !== "") {
+    filteredSongs = filteredSongs.filter((s) =>
+      s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.subtype.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  if (filterTag) {
+    filteredSongs = filteredSongs.filter(
+      (s) => s.type === filterTag || s.subtype === filterTag
+    );
+  }
+
   const totalPages = Math.ceil(filteredSongs.length / songsPerPage);
-  const displayedSongs = filteredSongs.slice(currentPage * songsPerPage, currentPage * songsPerPage + songsPerPage);
+  const displayedSongs = filteredSongs.slice(
+    currentPage * songsPerPage,
+    currentPage * songsPerPage + songsPerPage
+  );
 
   const renderSongBox = (song) => (
     <div className="song-box" key={song._id}>
       <div className="heart-icon" onClick={() => handleLike(song._id)}>
         {favorites.includes(song._id) ? "💖" : "🤍"}
       </div>
-
-      <div className="waveform"></div>
 
       <div className="song-info">
         <h3 className="song-title">{song.title}</h3>
@@ -116,40 +141,62 @@ function SongList() {
       </div>
 
       <div className="song-controls">
-        <button className="play-btn" onClick={() => togglePlay(song._id)}>{currentPlaying === song._id ? "⏸" : "▶"}</button>
+        <button className="play-btn" onClick={() => togglePlay(song._id)}>
+          {currentPlaying === song._id ? "⏸" : "▶"}
+        </button>
         <button className="download-btn" onClick={() => handleDownload(song)}>⬇</button>
       </div>
 
-      <audio id={`audio-${song._id}`} src={`http://localhost:5000/${song.filePath}`} onLoadedMetadata={(e) => setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))} />
+      <audio
+        id={`audio-${song._id}`}
+        src={`http://localhost:5000/${song.filePath}`}
+        onLoadedMetadata={(e) =>
+          setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
+        }
+      />
     </div>
   );
 
   return (
     <div className="songlist-wrapper">
-      <h2 className="songlist-title">🔥 เพลงที่ถูกใจมากที่สุด</h2>
-      <div className="song-grid">
-        {topLikes.map((s) => renderSongBox(s))}
-      </div>
 
-      <h2 className="songlist-title">⬇ เพลงที่ถูกดาวน์โหลดมากที่สุด</h2>
-      <div className="song-grid">
-        {topDownloads.map((s) => renderSongBox(s))}
-      </div>
+      {!searchTerm && !filterTag && (
+        <>
+          <h2 className="songlist-title">🔥 เพลงที่ถูกใจมากที่สุด</h2>
+          <div className="song-grid">{topLikes.map(renderSongBox)}</div>
 
-      <h2 className="songlist-title">🎵 {filterTag ? `เพลงในหมวด "${filterTag}"` : "เพลงทั้งหมด"}</h2>
-      <div className="song-grid">
-        {displayedSongs.map((s) => renderSongBox(s))}
-      </div>
+          <h2 className="songlist-title">⬇ เพลงที่ถูกดาวน์โหลดมากที่สุด</h2>
+          <div className="song-grid">{topDownloads.map(renderSongBox)}</div>
+        </>
+      )}
+
+      <h2 className="songlist-title">
+        🎵 {filterTag
+            ? `เพลงในหมวด "${filterTag}"`
+            : searchTerm
+            ? "เพลงที่ค้นหา"
+            : "เพลงทั้งหมด"}
+      </h2>
+
+      <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
 
       {totalPages > 1 && (
         <div className="pagination-dots">
           {Array.from({ length: totalPages }).map((_, i) => (
-            <span key={i} className={`dot ${i === currentPage ? "active" : ""}`} onClick={() => setCurrentPage(i)}></span>
+            <span
+              key={i}
+              className={`dot ${i === currentPage ? "active" : ""}`}
+              onClick={() => setCurrentPage(i)}
+            ></span>
           ))}
         </div>
       )}
 
-      {filterTag && <button className="clear-filter" onClick={() => setFilterTag(null)}>❌ ล้างตัวกรอง</button>}
+      {filterTag && (
+        <button className="clear-filter" onClick={() => setFilterTag(null)}>
+          ❌ ล้างตัวกรอง
+        </button>
+      )}
     </div>
   );
 }

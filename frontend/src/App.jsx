@@ -1,42 +1,27 @@
-import React from "react";
+import React, { useState } from "react";
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
-import TrendingSounds from "./components/TrendingSounds";
 import Footer from "./components/Footer";
-import UploadSong from "./upload/uploads";
-import Login from "./Login/Login";
-import Rigister from "./Rigisters/Rigister";
- 
-import Profile from "./Profiles/Profile";
-
 import SongList from "./home/SongList";
-import EditProfile from "./editprofile/editprofile";
-
+import UploadSong from "./upload/uploads";
 
 function App() {
+  const [searchTerm, setSearchTerm] = useState("");
+
   return (
     <div>
-      
       <Navbar />
-      {/* <Login /> */}
-      {/* <Rigister /> */}
-      {/* <Profile /> */}
-      <HeroSection />
 
-      {/* <TrendingSounds /> */}
+      {/* ✅ ส่ง setSearchTerm ลงไป */}
+      <HeroSection setSearchTerm={setSearchTerm} />
 
-      {/* <UploadSong /> */}
+      {/* ✅ ส่ง searchTerm ลงไป */}
+      <SongList searchTerm={searchTerm} />
 
-     {/*  <Navbar /> */}
-       {/* <Login />  */}
-       {/*<Rigister />*/}
-      {/* <HeroSection /> */}
-      {/* <EditProfile /> */}
-      {/* <TrendingSounds /> */}
-      {/* <Footer /> */}
-       {/* <UploadSong />  */}
-      <SongList/>
-            <Footer />
+      <Footer />
+ 
+      <UploadSong />
+
 
     </div>
   );
