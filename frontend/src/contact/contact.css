@@ -1,0 +1,55 @@
+body {
+  display: flex;
+  justify-content: center; /* จัดกึ่งกลางแนวนอน */
+  align-items: center;     /* จัดกึ่งกลางแนวตั้ง */
+  height: 100vh;           /* ให้ความสูงเต็มหน้าจอ */
+  margin: 0;               /* ลบ margin พื้นฐาน */
+  background-color: #343A4A; /* ตัวอย่างพื้นหลัง */
+}
+
+.contact-container {
+  padding: 6px;
+  border: 1px solid #333; /* เพิ่มกรอบ */
+  border-radius: 8px; /* มุมโค้งนิดหน่อย */
+  background-color: #4D556C; /* พื้นหลังอ่อน ๆ */
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1); /* เพิ่มเงาเบาๆ */
+  max-width: 600px; /* จำกัดความกว้าง */
+  margin: 15px auto; /* จัดให้อยู่กึ่งกลางหน้าจอ */
+  height: 170px;
+  overflow-y: auto;  /* 🔸 ให้มีแถบเลื่อนแนวตั้ง */
+}
+
+.contact-header {
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.contact-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.contact-list li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+  color: #333;
+}
+
+.social-icons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center; /* 🔸 จัดให้อยู่ตรงกลางแนวนอน */
+  gap: 20px;
+}
+
+.social-icons svg {
+  color: #000; /* สีไอคอน */
+  font-size: 28px;
+  transition: color 0.3s;
+}
+
+.social-icons svg:hover {
+  color: #ff0000; /* เปลี่ยนสีเมื่อ hover */
+}
