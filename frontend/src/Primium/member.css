@@ -1,0 +1,152 @@
+/* พื้นหลังรวม */
+.member-page {
+  min-height: 100vh;
+  background-color: #2e3440;
+  color: white;
+  font-family: "Poppins", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+ 
+.member-profile {
+    margin-left: 105px;
+}
+
+
+.profile-avatar-member {
+    position: relative;
+  display: inline-block;
+
+}
+
+.name {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.credits {
+  font-size: 13px;
+  color: #e0e0e0;
+}
+
+.sample-btn {
+  margin-top: 8px;
+  background-color: #ec4899;
+  border: none;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.sample-btn:hover {
+  background-color: #f472b6;
+}
+
+/* ส่วนสถานะสมาชิก */
+
+.status-section {
+  text-align: left;
+  max-width: 1200px;
+  width: 100%;
+  padding: 20px 20px;
+}
+
+.status-section h1 {
+  font-size: 22px;
+  font-weight: 60;
+  
+}
+
+.status-section p {
+  font-size: 14px;
+  color: #cfd2d6;
+  line-height: 1;
+  margin-top: 10px;
+}
+
+.status-text {
+  margin-left: 400px;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: #00ffff50;
+  margin: 20px 0 40px;
+}
+
+/* การ์ดแพ็กเกจ */
+.plan-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 24px;
+}
+
+.plan-card {
+  background-color: #3b4252;
+  border-radius: 20px;
+  padding: 24px 16px;
+  text-align: center;
+  transition: 0.3s;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+.plan-card:hover {
+  background-color: #434c5e;
+  transform: translateY(-4px);
+}
+
+.icon {
+  font-size: 45px;
+  margin-bottom: 12px;
+}
+
+.icon.cyan {
+  color: #5ffbf1;
+}
+
+.icon.pink {
+  color: #ec4899;
+}
+
+.plan-card h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.credit-text {
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 10px;
+}
+
+.price {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.per {
+  font-size: 12px;
+  color: #aaa;
+  margin-left: 5px;
+}
+
+.subscribe-btn {
+  margin-top: 16px;
+  background-color: #22d3ee;
+  border: none;
+  color: #1e293b;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.subscribe-btn:hover {
+  background-color: #67e8f9;
+}
