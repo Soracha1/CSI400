@@ -179,3 +179,33 @@ textarea {
     padding: 40px 30px;
   }
 }
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-btn {
+  padding: 6px 12px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 14px;
+  color: #fff; /*  เปลี่ยนเป็นสีขาว  */
+}
+
+.tag-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tag-btn.active {
+  background: linear-gradient(
+    90deg, 
+    #00c6ff 0%,  /* สีซ้าย (สีฟ้าสว่าง) */
+    #0072ff 100% /* สีขวา   */
+  );
+  border-color: #ffffff;
+}

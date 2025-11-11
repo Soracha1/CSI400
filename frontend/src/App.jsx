@@ -1,20 +1,23 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// 🧩 Components
+// ✅ Components
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
-import TrendingSounds from "./components/TrendingSounds";
 import Footer from "./components/Footer";
+import SongList from "./home/SongList";
 import UploadSong from "./upload/uploads";
 import Login from "./Login/Login";
 import Rigister from "./Rigisters/Rigister";
 import Profile from "./Profiles/Profile";
-import SongList from "./home/SongList";
 import EditProfile from "./editprofile/editprofile";
+import Primium from "./primium/member";
+import TrendingSounds from "./components/TrendingSounds"; // ✅ (ถ้ามี)
 
 function App() {
-  // ✅ โหลดข้อมูลผู้ใช้จาก session (กรณีล็อกอินด้วย Google)
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // ✅ โหลดข้อมูลผู้ใช้จาก session (Google Login)
   useEffect(() => {
     fetch("http://localhost:5000/auth/user", { credentials: "include" })
       .then((res) => {
@@ -27,9 +30,7 @@ function App() {
           console.log("✅ Logged in via Google:", data);
         }
       })
-      .catch(() => {
-        // ไม่ล็อกอินก็ไม่ต้องทำอะไร
-      });
+      .catch(() => {});
   }, []);
 
   return (
@@ -45,7 +46,7 @@ function App() {
               <>
                 <HeroSection />
                 <TrendingSounds />
-                <SongList />
+                <SongList searchTerm={searchTerm} />
               </>
             }
           />
@@ -56,7 +57,7 @@ function App() {
           {/* 🆕 หน้าสมัครสมาชิก */}
           <Route path="/register" element={<Rigister />} />
 
-          {/* 🎵 หน้าหลังล็อกอิน / dashboard */}
+          {/* 🎵 Dashboard / หน้าเพลงหลังล็อกอิน */}
           <Route path="/dashboard" element={<SongList />} />
 
           {/* 👤 โปรไฟล์ */}
@@ -67,6 +68,9 @@ function App() {
 
           {/* ⬆️ อัปโหลดเพลง */}
           <Route path="/upload" element={<UploadSong />} />
+
+          {/* ⭐ Premium */}
+          <Route path="/premium" element={<Primium />} />
         </Routes>
 
         <Footer />

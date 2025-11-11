@@ -1,0 +1,44 @@
+body {
+  display: flex;
+  justify-content: center; /* จัดกึ่งกลางแนวนอน */
+  align-items: center;     /* จัดกึ่งกลางแนวตั้ง */
+  height: 100vh;           /* ให้ความสูงเต็มหน้าจอ */
+  margin: 0;               /* ลบ margin พื้นฐาน */
+  background-color: #343A4A; /* ตัวอย่างพื้นหลัง */
+}
+
+.about-container {
+  padding: 6px;
+  border: 1px solid #333; /* เพิ่มกรอบ */
+  border-radius: 8px; /* มุมโค้งนิดหน่อย */
+  background-color: #4D556C; /* พื้นหลังอ่อน ๆ */
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1); /* เพิ่มเงาเบาๆ */
+  max-width: 600px; /* จำกัดความกว้าง */
+  margin: 15px auto; /* จัดให้อยู่กึ่งกลางหน้าจอ */
+  height: 170px;
+  overflow-y: auto;  /* 🔸 ให้มีแถบเลื่อนแนวตั้ง */
+}
+
+.about-box-header {
+  font-size: 12px;
+  background-color: #929292;
+  max-width: 300px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  text-align: center;
+  color: #fff;
+  width: 100%;
+  border-radius: 6px;
+}
+
+.about-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.about-list li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+  color: #333;
+}

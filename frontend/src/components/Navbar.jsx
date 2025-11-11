@@ -81,7 +81,6 @@ function Navbar() {
             />
           )}
         </div>
-
         <Link to="/premium" className="nav-link">
           Premium
         </Link>
@@ -112,6 +111,21 @@ function Navbar() {
             </Link>
           </>
         )}
+
+        {/* เมนูทางขวา */}
+        <a href="/premium" className="nav-link">
+          Premium
+        </a>
+        <a href="/about" className="nav-link">
+          Notification
+        </a>
+        <a href="/profile" className="nav-link">
+          Profile
+        </a>
+        <a href="/register" className="nav-link">
+          Sing-in
+        </a>
+        <button class="gradient-login-button">Log-In</button>
       </div>
     </header>
   );

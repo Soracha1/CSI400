@@ -1,3 +1,4 @@
+// server.js (ES module style)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -13,10 +14,9 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 dotenv.config();
 const app = express();
+const __dirname = path.resolve(); // for ESM
 
-// =============================
-// ⚙️ Middleware & Config
-// =============================
+// Middleware
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://localhost:5173"],
@@ -25,17 +25,13 @@ app.use(
 );
 app.use(express.json());
 
-// =============================
-// 💾 MongoDB
-// =============================
+// MongoDB
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// =============================
-// 👤 USER SYSTEM
-// =============================
+// User model
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
@@ -45,7 +41,7 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", userSchema);
 
-// --- Register ---
+// Register
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -61,7 +57,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// --- Login ---
+// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -71,18 +67,20 @@ app.post("/api/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid password" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET || "secret",
+      {
+        expiresIn: "7d",
+      }
+    );
     res.json({ message: "Login success", token, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// =============================
-// 🔐 PASSPORT + GOOGLE AUTH
-// =============================
+// Passport Google (optional)
 app.use(
   session({
     secret: process.env.JWT_SECRET || "mySecretKey",
@@ -90,7 +88,6 @@ app.use(
     saveUninitialized: false,
   })
 );
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -133,6 +130,10 @@ app.get(
 );
 
 app.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
@@ -155,8 +156,14 @@ app.get("/auth/user", (req, res) => {
 const musicPath = path.join("uploads/music");
 if (!fs.existsSync(musicPath)) fs.mkdirSync(musicPath, { recursive: true });
 
+// =========================
+// SONG model + multer
+// =========================
+const uploadsDir = path.join(__dirname, "uploads", "music");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, musicPath),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
@@ -170,32 +177,48 @@ const songSchema = new mongoose.Schema({
   mode: String,
   type: String,
   subtype: String,
+  tags: [String], // ✅ เปลี่ยนเป็น Array
+  soundType: String,
   filePath: String,
+  likes: { type: Number, default: 0 },
+  downloads: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
+
 const Song = mongoose.model("Song", songSchema);
 
+// Upload song
 app.post("/api/upload", upload.single("music"), async (req, res) => {
   try {
-    const { title, artist, description, bpm, key, mode, type, subtype } =
-      req.body;
+    if (!req.file)
+      return res.status(400).json({ message: "No music file uploaded" });
+
+    // save relative path that matches static serving below
+    const relativePath = path
+      .join("uploads", "music", req.file.filename)
+      .replace(/\\/g, "/");
+
     const newSong = await Song.create({
-      title,
-      artist,
-      description,
-      bpm: Number(bpm),
-      key,
-      mode,
-      type,
-      subtype,
-      filePath: req.file.path,
+      title: req.body.title || "",
+      artist: req.body.artist || "",
+      description: req.body.description || "",
+      bpm: req.body.bpm ? Number(req.body.bpm) : undefined,
+      key: req.body.key || "",
+      mode: req.body.mode || "",
+      type: req.body.type || "",
+      subtype: req.body.subtype || "",
+      tags: req.body.tags || "",
+      soundType: req.body.soundType || "",
+      filePath: relativePath,
     });
-    res.json(newSong);
+
+    res.json({ message: "Upload success", song: newSong });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// Get all songs
 app.get("/api/songs", async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });
@@ -207,8 +230,95 @@ app.get("/api/songs", async (req, res) => {
 
 app.use("/uploads/music", express.static("uploads/music"));
 
-// =============================
-// 🚀 START SERVER
-// =============================
+// Serve static files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Like song (increment)
+app.post("/api/songs/:id/like", async (req, res) => {
+  try {
+    const song = await Song.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { likes: 1 } },
+      { new: true }
+    );
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Download increment
+app.post("/api/songs/:id/download", async (req, res) => {
+  try {
+    const song = await Song.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { downloads: 1 } },
+      { new: true }
+    );
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Top lists
+app.get("/api/songs/top-likes", async (req, res) => {
+  try {
+    const songs = await Song.find().sort({ likes: -1 }).limit(5);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/api/songs/top-downloads", async (req, res) => {
+  try {
+    const songs = await Song.find().sort({ downloads: -1 }).limit(5);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+
+// =========================
+// TAGS ดึงแท็กทั้งหมด
+app.get("/api/tags", async (req, res) => {
+  try {
+    const tags = await Song.find().distinct("tags");
+    res.json(tags.filter((t) => t && t.trim() !== ""));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// =========================
+// SEARCH endpoint
+app.get("/api/songs/search", async (req, res) => {
+  try {
+    const { q, tag } = req.query;
+
+    let query = {};
+
+    if (q) {
+      query = {
+        $or: [
+          { title: { $regex: q, $options: "i" } },
+          { artist: { $regex: q, $options: "i" } },
+          { description: { $regex: q, $options: "i" } },
+          { tags: { $regex: q, $options: "i" } },
+        ],
+      };
+    }
+
+    if (tag) {
+      query = { tags: tag };
+    }
+
+    const songs = await Song.find(query);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
