@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./Rigister.css";
 
 function Rigister() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const navigate = useNavigate();
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -14,7 +16,7 @@ function Rigister() {
     try {
       await axios.post("http://localhost:5000/api/register", form);
       alert("✅ Register success!");
-      window.location.href = "/login";
+      navigate("/login"); // ✅ เปลี่ยนจาก window.location.href
     } catch (err) {
       alert(err.response?.data?.message || "Register failed");
     }
@@ -30,7 +32,6 @@ function Rigister() {
         <div className="i-header">Create an account</div>
 
         <label>Username</label>
-        <br />
         <input
           type="text"
           name="username"
@@ -38,10 +39,8 @@ function Rigister() {
           onChange={handleChange}
           required
         />
-        <br />
 
         <label>Email</label>
-        <br />
         <input
           type="email"
           name="email"
@@ -49,10 +48,8 @@ function Rigister() {
           onChange={handleChange}
           required
         />
-        <br />
 
         <label>Password</label>
-        <br />
         <div className="password-container">
           <input
             type={showPassword ? "text" : "password"}
@@ -65,7 +62,6 @@ function Rigister() {
             {showPassword ? "Hide" : "Show"}
           </button>
         </div>
-        <br />
 
         <button type="submit" className="create-btn">
           Create account

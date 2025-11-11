@@ -124,3 +124,24 @@ body {
   transform: scale(1.05); /* ขยายปุ่มเล็กน้อย */
   box-shadow: 0 4px 15px rgba(0, 150, 255, 0.4); /* เพิ่มเงาฟุ้งๆ สีฟ้า */
 }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+}
+
+.profile-link {
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+

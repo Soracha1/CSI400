@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -15,7 +17,7 @@ function Login() {
       const res = await axios.post("http://localhost:5000/api/login", form);
       localStorage.setItem("token", res.data.token);
       alert("✅ Login success!");
-      window.location.href = "/dashboard";
+      navigate("/dashboard"); // ✅ เปลี่ยนจาก window.location.href
     } catch (err) {
       alert(err.response?.data?.message || "Login failed");
     }
@@ -31,7 +33,6 @@ function Login() {
         <div className="login-header">Log in to your account</div>
 
         <label>Email</label>
-        <br />
         <input
           type="email"
           name="email"
@@ -39,21 +40,20 @@ function Login() {
           onChange={handleChange}
           required
         />
-        <br />
 
         <label>Password</label>
-        <br />
-        <input
-          type={showPassword ? "text" : "password"}
-          name="password"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-        <button type="button" onClick={() => setShowPassword(!showPassword)}>
-          {showPassword ? "Hide" : "Show"}
-        </button>
-        <br />
+        <div className="password-container">
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+          <button type="button" onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
 
         <button type="submit" className="login-button">
           Log in

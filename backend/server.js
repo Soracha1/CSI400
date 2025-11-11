@@ -41,6 +41,7 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
+  picture: String, // ✅ เพิ่มรูปโปรไฟล์
 });
 const User = mongoose.model("User", userSchema);
 
@@ -108,6 +109,7 @@ passport.use(
             username: profile.displayName,
             email: profile.emails?.[0]?.value,
             googleId: profile.id,
+            picture: profile.photos?.[0]?.value, // ✅ เก็บรูปโปรไฟล์ Google
           });
         }
         return done(null, user);
@@ -124,6 +126,7 @@ passport.deserializeUser(async (id, done) => {
   done(null, user);
 });
 
+// --- Google Auth Routes ---
 app.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -133,9 +136,18 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    res.redirect("http://localhost:3000/dashboard");
+    res.redirect("http://localhost:5173/"); // ✅ กลับหน้า React
   }
 );
+
+// --- ดึงข้อมูลผู้ใช้ปัจจุบัน (สำหรับ React ใช้ตอนโหลดเว็บ) ---
+app.get("/auth/user", (req, res) => {
+  if (req.user) {
+    res.json(req.user);
+  } else {
+    res.status(401).json({ message: "Not logged in" });
+  }
+});
 
 // =============================
 // 🎵 SONG SYSTEM
@@ -163,7 +175,6 @@ const songSchema = new mongoose.Schema({
 });
 const Song = mongoose.model("Song", songSchema);
 
-// --- Upload song ---
 app.post("/api/upload", upload.single("music"), async (req, res) => {
   try {
     const { title, artist, description, bpm, key, mode, type, subtype } =
@@ -181,12 +192,10 @@ app.post("/api/upload", upload.single("music"), async (req, res) => {
     });
     res.json(newSong);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Get all songs ---
 app.get("/api/songs", async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });
@@ -196,7 +205,6 @@ app.get("/api/songs", async (req, res) => {
   }
 });
 
-// --- Serve music files ---
 app.use("/uploads/music", express.static("uploads/music"));
 
 // =============================
