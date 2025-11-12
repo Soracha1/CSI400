@@ -12,6 +12,7 @@ function SongList({ searchTerm }) {
   const [filterTag, setFilterTag] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [durations, setDurations] = useState({});
+  const [currentTimes, setCurrentTimes] = useState({});
 
   const navigate = useNavigate();
   const songsPerPage = 5;
@@ -75,15 +76,27 @@ function SongList({ searchTerm }) {
     if (audio.paused) {
       audio.play();
       setCurrentPlaying(id);
+
+      // อัปเดตเวลาเล่น
+      const interval = setInterval(() => {
+        setCurrentTimes(prev => ({ ...prev, [id]: audio.currentTime }));
+      }, 200);
+
+      audio.onended = () => {
+        clearInterval(interval);
+        setCurrentPlaying(null);
+        setCurrentTimes(prev => ({ ...prev, [id]: 0 }));
+      };
     } else {
       audio.pause();
       audio.currentTime = 0;
       setCurrentPlaying(null);
+      setCurrentTimes(prev => ({ ...prev, [id]: 0 }));
     }
   };
 
   const formatTime = (seconds) => {
-    if (!seconds) return "…";
+    if (!seconds) return "0:00";
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
@@ -125,36 +138,53 @@ function SongList({ searchTerm }) {
       <div className="heart-icon" onClick={(e) => { e.stopPropagation(); handleLike(song._id); }}>
         {favorites.includes(song._id) ? "💖" : "🤍"}
       </div>
-      <div className={`wave-anim ${currentPlaying === song._id ? "active" : ""}`}>
+
+      <div className="wave-anim">
         <span></span><span></span><span></span><span></span><span></span>
       </div>
+
       <div className="song-info">
         <h3>{song.title}</h3>
         <p>{song.artist}</p>
       </div>
+
       <div className="song-tags">
         <span onClick={(e) => { e.stopPropagation(); setFilterTag(song.type); }}>#{song.type}</span>
         <span onClick={(e) => { e.stopPropagation(); setFilterTag(song.subtype); }}>#{song.subtype}</span>
       </div>
+
       <div className="song-meta">
-        <span>⏱ {formatTime(durations[song._id])}</span>
+        <span>⏱ {formatTime(currentTimes[song._id] || 0)} / {formatTime(durations[song._id] || 0)}</span>
         <span>{song.bpm} BPM</span>
       </div>
-    <div className="song-controls" onClick={(e) => e.stopPropagation()}>
-  <button
-    className={`song-play-btn ${currentPlaying === song._id ? "active" : ""}`}
-    onClick={() => togglePlay(song._id)}
-  >
-    {currentPlaying === song._id ? "⏸ หยุด" : "▶ เล่น"}
-  </button>
 
-  <button
-    className="song-download-btn"
-    onClick={() => handleDownload(song)}
-  >
-    ⬇ ดาวน์โหลด
-  </button>
-</div>
+      <div className="song-controls" onClick={(e) => e.stopPropagation()}>
+        <button
+          className={`song-play-btn ${currentPlaying === song._id ? "active" : ""}`}
+          onClick={() => togglePlay(song._id)}
+        >
+          {currentPlaying === song._id ? "⏹ หยุด" : "▶ เล่น"}
+        </button>
+
+        <button
+          className="song-download-btn"
+          onClick={() => handleDownload(song)}
+        >
+          ⬇ ดาวน์โหลด
+        </button>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="song-progress">
+        <div
+          className="progress-fill"
+          style={{
+            width: durations[song._id]
+              ? `${(currentTimes[song._id] / durations[song._id]) * 100}%`
+              : "0%",
+          }}
+        ></div>
+      </div>
 
       <audio
         id={`audio-${song._id}`}

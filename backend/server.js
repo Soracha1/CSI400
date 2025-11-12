@@ -12,6 +12,9 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
+
+
+
 dotenv.config();
 const app = express();
 const __dirname = path.resolve(); // for ESM
@@ -25,6 +28,7 @@ app.use(
   })
 );
 app.use(express.json());
+
 
 // MongoDB
 mongoose
@@ -291,3 +295,17 @@ app.get("/api/songs/:id", async (req, res) => {
   }
 });
 
+
+// อนุญาต frontend ทุก origin ที่ต้องการ
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://localhost:5173"], // frontend
+    credentials: true,
+  })
+);
+
+// Serve static files พร้อม header CORS
+app.use("/uploads", (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*"); // อนุญาตทุกโดเมน
+  next();
+}, express.static(path.join(__dirname, "uploads")));
