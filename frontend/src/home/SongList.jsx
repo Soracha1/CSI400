@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./SongList.css";
 
 function SongList({ searchTerm }) {
@@ -11,6 +12,9 @@ function SongList({ searchTerm }) {
   const [filterTag, setFilterTag] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [durations, setDurations] = useState({});
+  const [currentTimes, setCurrentTimes] = useState({});
+
+  const navigate = useNavigate();
   const songsPerPage = 5;
 
   useEffect(() => {
@@ -23,6 +27,16 @@ function SongList({ searchTerm }) {
 
   useEffect(() => {
     setFilterTag(null);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    loadAllData();
+  }, []);
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, filterTag]);
+  useEffect(() => {
+    if (searchTerm) setFilterTag(null);
   }, [searchTerm]);
 
   const token = localStorage.getItem("token");
@@ -75,6 +89,7 @@ function SongList({ searchTerm }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      await axios.post(`http://localhost:5000/api/songs/${song._id}/download`);
       loadAllData();
     } catch (err) {
       console.error("Download error:", err);
@@ -96,33 +111,51 @@ function SongList({ searchTerm }) {
     if (audio.paused) {
       audio.play();
       setCurrentPlaying(id);
+
+      // อัปเดตเวลาเล่น
+      const interval = setInterval(() => {
+        setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
+      }, 200);
+
+      audio.onended = () => {
+        clearInterval(interval);
+        setCurrentPlaying(null);
+        setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
+      };
     } else {
       audio.pause();
       audio.currentTime = 0;
       setCurrentPlaying(null);
+      setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
     }
   };
 
   const formatTime = (seconds) => {
-    if (!seconds) return "…";
+    if (!seconds) return "0:00";
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const normalize = (text) => text?.toString().trim().toLowerCase() || "";
+
   let filteredSongs = songs;
-  if (searchTerm?.trim()) {
-    filteredSongs = filteredSongs.filter(
+  if (searchTerm && searchTerm.trim() !== "") {
+    const term = normalize(searchTerm);
+    filteredSongs = songs.filter(
       (s) =>
-        s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.subtype.toLowerCase().includes(searchTerm.toLowerCase())
+        normalize(s.title).includes(term) ||
+        normalize(s.artist).includes(term) ||
+        normalize(s.type).includes(term) ||
+        normalize(s.subtype).includes(term) ||
+        normalize(s.bpm).includes(term)
     );
   }
   if (filterTag) {
     filteredSongs = filteredSongs.filter(
-      (s) => s.type === filterTag || s.subtype === filterTag
+      (s) =>
+        normalize(s.type) === normalize(filterTag) ||
+        normalize(s.subtype) === normalize(filterTag)
     );
   }
 
@@ -133,33 +166,91 @@ function SongList({ searchTerm }) {
   );
 
   const renderSongBox = (song) => (
-    <div className="song-box" key={song._id}>
-      <div className="heart-icon" onClick={() => handleLike(song._id)}>
+    <div
+      className="song-box"
+      key={song._id}
+      onClick={() => navigate(`/song/${song._id}`)}
+      style={{ cursor: "pointer" }}
+    >
+      <div
+        className="heart-icon"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleLike(song._id);
+        }}
+      >
         {favorites.includes(song._id) ? "💖" : "🤍"}
       </div>
 
+      <div className="wave-anim">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
       <div className="song-info">
-        <h3 className="song-title">{song.title}</h3>
-        <p className="song-artist">{song.artist}</p>
+        <h3>{song.title}</h3>
+        <p>{song.artist}</p>
       </div>
 
       <div className="song-tags">
-        <span onClick={() => setFilterTag(song.type)}>#{song.type}</span>
-        <span onClick={() => setFilterTag(song.subtype)}>#{song.subtype}</span>
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            setFilterTag(song.type);
+          }}
+        >
+          #{song.type}
+        </span>
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            setFilterTag(song.subtype);
+          }}
+        >
+          #{song.subtype}
+        </span>
       </div>
 
       <div className="song-meta">
-        <span className="duration">⏱ {formatTime(durations[song._id])}</span>
-        <span className="bpm">{song.bpm} BPM</span>
+        <span>
+          ⏱ {formatTime(currentTimes[song._id] || 0)} /{" "}
+          {formatTime(durations[song._id] || 0)}
+        </span>
+        <span>{song.bpm} BPM</span>
       </div>
 
-      <div className="song-controls">
-        <button className="play-btn" onClick={() => togglePlay(song._id)}>
-          {currentPlaying === song._id ? "⏸" : "▶"}
+      <div className="song-controls" onClick={(e) => e.stopPropagation()}>
+        <button
+          className={`song-play-btn ${
+            currentPlaying === song._id ? "active" : ""
+          }`}
+          onClick={() => togglePlay(song._id)}
+        >
+          {currentPlaying === song._id ? "⏹ หยุด" : "▶ เล่น"}
         </button>
-        <button className="download-btn" onClick={() => handleDownload(song)}>
-          ⬇
+      
+
+        <button
+          className="song-download-btn"
+          onClick={() => handleDownload(song)}
+        >
+          ⬇ ดาวน์โหลด
         </button>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="song-progress">
+        <div
+          className="progress-fill"
+          style={{
+            width: durations[song._id]
+              ? `${(currentTimes[song._id] / durations[song._id]) * 100}%`
+              : "0%",
+          }}
+        ></div>
       </div>
 
       <audio
@@ -176,9 +267,8 @@ function SongList({ searchTerm }) {
     <div className="songlist-wrapper">
       {!searchTerm && !filterTag && (
         <>
-          <h2 className="songlist-title">🔥 Most Liked</h2>
+          <h2 className="songlist-title">💖 เพลงที่ถูกใจมากที่สุด</h2>
           <div className="song-grid">{topLikes.map(renderSongBox)}</div>
-
           <h2 className="songlist-title">⬇ เพลงที่ถูกดาวน์โหลดมากที่สุด</h2>
           <div className="song-grid">{topDownloads.map(renderSongBox)}</div>
         </>
@@ -191,8 +281,8 @@ function SongList({ searchTerm }) {
           : searchTerm
           ? "เพลงที่ค้นหา"
           : "เพลงทั้งหมด"}
+        
       </h2>
-
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
 
       {totalPages > 1 && (

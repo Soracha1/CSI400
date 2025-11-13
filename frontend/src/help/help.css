@@ -1,0 +1,38 @@
+/* เอา flex ออกจาก body เพื่อไม่ให้บีบทุกอย่างให้อยู่กลาง */
+body {
+  margin: 0;
+  background-color: #f5f7fa;
+  font-family: Arial, sans-serif;
+}
+
+/* กล่อง help */
+.help-container {
+  max-width: 800px;
+  margin: 100px auto; /* เว้นจาก Navbar และ Footer */
+  padding: 30px 40px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background-color: #4D556C;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  color: #f9f9f9;
+  line-height: 1.6;
+  font-size: 14px;
+  overflow-y: visible;
+}
+
+/* หัวข้อ */
+.help-header {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #00bfff;
+}
+
+/* ข้อความ */
+.help-container p {
+  font-size: 15px;
+  line-height: 1.8;
+  text-align: left;
+}
+

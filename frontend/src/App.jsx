@@ -1,23 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react"; // ✅ เพิ่ม useEffect
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// ✅ Components
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
 import Footer from "./components/Footer";
 import SongList from "./home/SongList";
+import SongDetail from "./home/SongDetail";
 import UploadSong from "./upload/uploads";
 import Login from "./Login/Login";
 import Rigister from "./Rigisters/Rigister";
 import Profile from "./Profiles/Profile";
 import EditProfile from "./editprofile/editprofile";
 import Primium from "./primium/member";
-import TrendingSounds from "./components/TrendingSounds";
+// import Help from "./help/Help";
+// import About from "./help/about/about";
+// import Contact from "./help/contact/contact";
+// import QandA from "./help/q&a/qqa"; // 
+
+
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // ✅ โหลดข้อมูลผู้ใช้จาก session (Google Login)
   useEffect(() => {
     fetch("http://localhost:5000/auth/user", { credentials: "include" })
       .then((res) => {
@@ -36,45 +40,35 @@ function App() {
   return (
     <Router>
       <div>
-        {/* ✅ Navbar บนทุกหน้า */}
         <Navbar setSearchTerm={setSearchTerm} />
 
         <Routes>
-          {/* ✅ หน้าแรก */}
           <Route
             path="/"
             element={
               <>
                 <HeroSection setSearchTerm={setSearchTerm} />
-                <TrendingSounds />
+               
                 <SongList searchTerm={searchTerm} />
               </>
             }
           />
-
-          {/* ✅ Login */}
           <Route path="/login" element={<Login />} />
-
-          {/* ✅ Register */}
           <Route path="/register" element={<Rigister />} />
-
-          {/* ✅ Dashboard (หน้าเพลงหลังล็อกอิน) */}
           <Route path="/dashboard" element={<SongList />} />
-
-          {/* ✅ Profile */}
           <Route path="/profile" element={<Profile />} />
-
-          {/* ✅ แก้ไขโปรไฟล์ */}
           <Route path="/edit-profile" element={<EditProfile />} />
-
-          {/* ✅ อัปโหลดเพลง */}
           <Route path="/upload" element={<UploadSong />} />
-
-          {/* ✅ Premium Page */}
           <Route path="/premium" element={<Primium />} />
+          <Route path="/song/:id" element={<SongDetail />} />
+          {/* <Route path="/about" element={<About />} /> */}
+          {/* <Route path="/contact" element={<Contact />} />
+         <Route path="/qa" element={<QandA />} />
+          <Route path="/help" element={<Help />} /> */}
+
+          
         </Routes>
 
-        {/* ✅ Footer แสดงทุกหน้า */}
         <Footer />
       </div>
     </Router>

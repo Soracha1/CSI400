@@ -1,15 +1,19 @@
+/* โครงหน้า SongList */
 .songlist-wrapper {
   text-align: center;
   background-color: #2b2f3a;
   color: #fff;
   padding: 40px 0;
+  min-height: 100vh;
 }
 
 .songlist-title {
   margin-bottom: 20px;
   font-size: 1.8rem;
+  color: #ffffff;
 }
 
+/* GRID */
 .song-grid {
   display: flex;
   flex-wrap: wrap;
@@ -17,23 +21,25 @@
   gap: 25px;
 }
 
+/* SONG CARD */
 .song-box {
   background: linear-gradient(180deg, #f9f9ff 0%, #b4b8ff 100%);
-  border-radius: 16px;
-  width: 200px;
-  height: 260px;
+  border-radius: 18px;
+  width: 210px;
+  height: 270px;
   color: #000;
   position: relative;
-  padding: 15px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s;
+  transition: all 0.3s ease;
 }
 
 .song-box:hover {
-  transform: translateY(-5px);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 /* หัวใจ */
@@ -43,41 +49,74 @@
   top: 15px;
   cursor: pointer;
   font-size: 1.2rem;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
 }
 
 .heart-icon:hover {
-  transform: scale(1.2);
+  transform: scale(1.25);
 }
 
-/* Waveform */
-.waveform {
-  background: url("https://upload.wikimedia.org/wikipedia/commons/0/0f/Waveform.svg") no-repeat center;
-  background-size: contain;
-  height: 40px;
-  margin-top: 15px;
+/* Wave animation */
+.wave-anim {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 30px;
+  gap: 3px;
+  margin-top: 10px;
 }
 
-/* ชื่อเพลง */
+.wave-anim span {
+  width: 4px;
+  height: 6px;
+  background: #5a5cd6;
+  border-radius: 2px;
+  opacity: 0.5;
+  animation: wave 1s infinite ease-in-out;
+}
+
+.wave-anim.active span {
+  opacity: 1;
+}
+
+.wave-anim span:nth-child(1) { animation-delay: 0s; }
+.wave-anim span:nth-child(2) { animation-delay: 0.1s; }
+.wave-anim span:nth-child(3) { animation-delay: 0.2s; }
+.wave-anim span:nth-child(4) { animation-delay: 0.3s; }
+.wave-anim span:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes wave {
+  0%, 100% { height: 6px; }
+  50% { height: 18px; }
+}
+
+/* SONG INFO */
 .song-info h3 {
   font-size: 1rem;
   margin: 8px 0 2px;
+  color: #000;
+  font-weight: bold;
 }
 
 .song-info p {
   font-size: 0.85rem;
-  color: #444;
+  color: #333;
 }
 
-/* TAG */
+/* TAGS */
 .song-tags span {
-  background: #d2d4ff;
+  background: #93d7f7;
   color: #333;
   font-size: 0.7rem;
   border-radius: 12px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   margin: 2px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.song-tags span:hover {
+  background: #a5a5b1;
 }
 
 /* META */
@@ -89,32 +128,83 @@
   margin-top: 8px;
 }
 
-/* CONTROLS */
+/* ==============================
+   ปุ่มควบคุมเพลง (ใหม่)
+============================== */
 .song-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  background-color: #20233a;
-  border-radius: 12px;
-  padding: 6px 10px;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: nowrap; /* ป้องกันปุ่มขึ้นบรรทัดใหม่ */
 }
 
-.play-btn,
-.download-btn {
-  background: none;
+/* ปรับปุ่มเล่นเพลงและดาวน์โหลด */
+.song-play-btn,
+.song-download-btn {
+  display: inline-flex;      /* ป้องกันเว้นบรรทัด */
+  align-items: center;       /* จัดไอคอนและข้อความชิดกลางแนวตั้ง */
+  justify-content: center;   /* จัดกลางแนวนอน */
+  white-space: nowrap;       /* ป้องกันข้อความขึ้นบรรทัดใหม่ */
+  min-width: 70px;           /* กำหนดขนาดขั้นต่ำเท่ากันทั้งสถานะเล่น/หยุด */
+}
+
+
+/* ปุ่มเล่นเพลง */
+.song-play-btn {
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
   border: none;
-  color: #fff;
-  font-size: 1rem;
+  color: white;
+  font-weight: 500;
+  font-size: 0.7rem;
+  border-radius: 18px;
+  padding: 4px 10px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.25s ease;
+  display: inline-flex; /* เปลี่ยนจาก flex เป็น inline-flex */
+  align-items: center;
+  justify-content: center; /* ชิดกลางแนวนอน */
+  gap: 5px;
+  box-shadow: 0 1px 4px rgba(0, 114, 255, 0.3);
+  white-space: nowrap; /* ป้องกันข้อความขึ้นบรรทัดใหม่ */
 }
 
-.play-btn:hover,
-.download-btn:hover {
-  transform: scale(1.2);
+
+.song-play-btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #0096ff, #0056ff);
 }
 
-/* จุดเลื่อนหน้า */
+.song-play-btn.active {
+  background: linear-gradient(135deg, #ff6b6b, #d94141);
+}
+
+/* ปุ่มดาวน์โหลด */
+.song-download-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none;
+  color: white;
+  font-weight: 500;
+  font-size: 0.7rem;
+  border-radius: 18px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.3);
+}
+
+.song-download-btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+/* ==============================
+   Pagination & Filter
+============================== */
 .pagination-dots {
   margin-top: 20px;
 }
@@ -135,7 +225,7 @@
 }
 
 .clear-filter {
-  background: #444;
+  background: #555;
   color: white;
   border: none;
   border-radius: 8px;
@@ -146,5 +236,25 @@
 }
 
 .clear-filter:hover {
-  background: #666;
+  background: #777;
+}
+/* ==============================
+   Progress Bar
+============================== */
+.song-progress {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: #ddd;
+  border-radius: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.song-progress .progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  border-radius: 3px;
+  transition: width 0.1s linear;
 }

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import logo from "../assets/logo.png";
+import { FaBell } from "react-icons/fa";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
@@ -10,6 +11,9 @@ function Navbar() {
   const [showSlider, setShowSlider] = useState(false);
   const [user, setUser] = useState(null);
   const [limits, setLimits] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,24 +35,17 @@ function Navbar() {
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
-        await fetchLimits(parsed._id); // ✅ โหลด limits
+        await fetchLimits(parsed._id);
       } else {
         setUser(null);
         setLimits(null);
       }
     };
-
     loadUser();
-
-    // อัปเดต user หลัง login สำเร็จ
     window.addEventListener("userLoggedIn", loadUser);
-
-    return () => {
-      window.removeEventListener("userLoggedIn", loadUser);
-    };
+    return () => window.removeEventListener("userLoggedIn", loadUser);
   }, []);
 
-  // ปรับระดับเสียง
   const handleVolumeChange = (value) => {
     const newVolume = parseFloat(value);
     setVolume(newVolume);
@@ -57,7 +54,6 @@ function Navbar() {
       .forEach((el) => (el.volume = newVolume));
   };
 
-  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -68,6 +64,22 @@ function Navbar() {
     window.dispatchEvent(new Event("userLoggedOut"));
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const notifications = [
+    { id: 1, text: "🎧 New track: Lo-fi Chill Mix" },
+    { id: 2, text: "🔥 Your favorite sample hit 1k downloads!" },
+    { id: 3, text: "💬 Someone commented on your post" },
+  ];
+
   return (
     <header className="header">
       <div className="header-left">
@@ -75,7 +87,6 @@ function Navbar() {
           <img src={logo} alt="Sound Share Logo" className="logo" />
         </Link>
       </div>
-
       <div className="header-right">
         <div className="volume-container">
           <button
@@ -94,28 +105,21 @@ function Navbar() {
               value={volume}
               onChange={(e) => handleVolumeChange(e.target.value)}
               className="volume-slider"
-              orient="vertical"
             />
           )}
         </div>
-
         <Link to="/upload" className="nav-link">
           Upload
         </Link>
         <Link to="/premium" className="nav-link">
           Premium
         </Link>
-        <Link to="/about" className="nav-link">
-          Notifications
-        </Link>
-
         {limits && (
           <div className="usage-info">
             Uploads: {limits.uploadCount}/{limits.maxUpload} | Downloads:{" "}
             {limits.downloadCount}/{limits.maxDownload}
           </div>
         )}
-
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
@@ -139,6 +143,29 @@ function Navbar() {
             </Link>
           </>
         )}
+
+        <div className="notification-wrapper" ref={dropdownRef}>
+          <button
+            className="icon-button"
+            onClick={() => setShowDropdown(!showDropdown)}
+            title="ดูการแจ้งเตือน"
+          >
+            <FaBell size={18} />
+          </button>
+          {showDropdown && (
+            <div className="notification-dropdown">
+              {notifications.length > 0 ? (
+                notifications.map((n) => (
+                  <div key={n.id} className="notification-item">
+                    {n.text}
+                  </div>
+                ))
+              ) : (
+                <div className="notification-empty">No notifications</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
