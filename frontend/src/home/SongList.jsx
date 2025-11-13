@@ -21,10 +21,11 @@ function SongList({ searchTerm }) {
     setCurrentPage(0);
   }, [searchTerm, filterTag]);
 
-  // ✅ เมื่อมีการค้นหาใหม่ → ปิด filterTag ทันที → ให้ข้อมูลแสดง
   useEffect(() => {
     setFilterTag(null);
   }, [searchTerm]);
+
+  const token = localStorage.getItem("token");
 
   const loadAllData = async () => {
     try {
@@ -46,7 +47,13 @@ function SongList({ searchTerm }) {
       setFavorites((prev) =>
         prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
       );
-      await axios.post(`http://localhost:5000/api/songs/${id}/like`);
+
+      await axios.post(
+        `http://localhost:5000/api/songs/${id}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       loadAllData();
     } catch (err) {
       console.error("Like error:", err);
@@ -55,12 +62,19 @@ function SongList({ searchTerm }) {
 
   const handleDownload = async (song) => {
     try {
+      // ดาวน์โหลดไฟล์
       const link = document.createElement("a");
       link.href = `http://localhost:5000/${song.filePath}`;
       link.download = `${song.title}.mp3`;
       link.click();
 
-      await axios.post(`http://localhost:5000/api/songs/${song._id}/download`);
+      // เพิ่ม download count ใน backend
+      await axios.post(
+        `http://localhost:5000/api/songs/${song._id}/download`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       loadAllData();
     } catch (err) {
       console.error("Download error:", err);
@@ -97,16 +111,15 @@ function SongList({ searchTerm }) {
   };
 
   let filteredSongs = songs;
-
-  if (searchTerm && searchTerm.trim() !== "") {
-    filteredSongs = filteredSongs.filter((s) =>
-      s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.subtype.toLowerCase().includes(searchTerm.toLowerCase())
+  if (searchTerm?.trim()) {
+    filteredSongs = filteredSongs.filter(
+      (s) =>
+        s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.subtype.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
-
   if (filterTag) {
     filteredSongs = filteredSongs.filter(
       (s) => s.type === filterTag || s.subtype === filterTag
@@ -144,7 +157,9 @@ function SongList({ searchTerm }) {
         <button className="play-btn" onClick={() => togglePlay(song._id)}>
           {currentPlaying === song._id ? "⏸" : "▶"}
         </button>
-        <button className="download-btn" onClick={() => handleDownload(song)}>⬇</button>
+        <button className="download-btn" onClick={() => handleDownload(song)}>
+          ⬇
+        </button>
       </div>
 
       <audio
@@ -159,10 +174,9 @@ function SongList({ searchTerm }) {
 
   return (
     <div className="songlist-wrapper">
-
       {!searchTerm && !filterTag && (
         <>
-          <h2 className="songlist-title">🔥 เพลงที่ถูกใจมากที่สุด</h2>
+          <h2 className="songlist-title">🔥 Most Liked</h2>
           <div className="song-grid">{topLikes.map(renderSongBox)}</div>
 
           <h2 className="songlist-title">⬇ เพลงที่ถูกดาวน์โหลดมากที่สุด</h2>
@@ -171,11 +185,12 @@ function SongList({ searchTerm }) {
       )}
 
       <h2 className="songlist-title">
-        🎵 {filterTag
-            ? `เพลงในหมวด "${filterTag}"`
-            : searchTerm
-            ? "เพลงที่ค้นหา"
-            : "เพลงทั้งหมด"}
+        🎵{" "}
+        {filterTag
+          ? `เพลงในหมวด "${filterTag}"`
+          : searchTerm
+          ? "เพลงที่ค้นหา"
+          : "เพลงทั้งหมด"}
       </h2>
 
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>

@@ -12,7 +12,7 @@ import Rigister from "./Rigisters/Rigister";
 import Profile from "./Profiles/Profile";
 import EditProfile from "./editprofile/editprofile";
 import Primium from "./primium/member";
-import TrendingSounds from "./components/TrendingSounds"; // ✅ (ถ้ามี)
+import TrendingSounds from "./components/TrendingSounds";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,43 +36,45 @@ function App() {
   return (
     <Router>
       <div>
-        <Navbar />
+        {/* ✅ Navbar บนทุกหน้า */}
+        <Navbar setSearchTerm={setSearchTerm} />
 
         <Routes>
-          {/* 🏠 หน้าแรก */}
+          {/* ✅ หน้าแรก */}
           <Route
             path="/"
             element={
               <>
-                <HeroSection />
+                <HeroSection setSearchTerm={setSearchTerm} />
                 <TrendingSounds />
                 <SongList searchTerm={searchTerm} />
               </>
             }
           />
 
-          {/* 🔐 หน้าเข้าสู่ระบบ */}
+          {/* ✅ Login */}
           <Route path="/login" element={<Login />} />
 
-          {/* 🆕 หน้าสมัครสมาชิก */}
+          {/* ✅ Register */}
           <Route path="/register" element={<Rigister />} />
 
-          {/* 🎵 Dashboard / หน้าเพลงหลังล็อกอิน */}
+          {/* ✅ Dashboard (หน้าเพลงหลังล็อกอิน) */}
           <Route path="/dashboard" element={<SongList />} />
 
-          {/* 👤 โปรไฟล์ */}
+          {/* ✅ Profile */}
           <Route path="/profile" element={<Profile />} />
 
-          {/* 📝 แก้ไขโปรไฟล์ */}
+          {/* ✅ แก้ไขโปรไฟล์ */}
           <Route path="/edit-profile" element={<EditProfile />} />
 
-          {/* ⬆️ อัปโหลดเพลง */}
+          {/* ✅ อัปโหลดเพลง */}
           <Route path="/upload" element={<UploadSong />} />
 
-          {/* ⭐ Premium */}
+          {/* ✅ Premium Page */}
           <Route path="/premium" element={<Primium />} />
         </Routes>
 
+        {/* ✅ Footer แสดงทุกหน้า */}
         <Footer />
       </div>
     </Router>

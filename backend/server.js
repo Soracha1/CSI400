@@ -1,4 +1,4 @@
-// server.js (ES module style)
+// server.js (ESM)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -14,9 +14,9 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 dotenv.config();
 const app = express();
-const __dirname = path.resolve(); // for ESM
+const __dirname = path.resolve();
 
-// Middleware
+// ================= Middleware =================
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://localhost:5173"],
@@ -24,36 +24,81 @@ app.use(
   })
 );
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// MongoDB
+// ================= MongoDB =================
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => console.error("❌ MongoDB error:", err));
 
-// User model
+// ================= Models =================
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
   password: String,
   googleId: String,
-  picture: String, // ✅ เพิ่มรูปโปรไฟล์
+  picture: String,
+  downloadCount: { type: Number, default: 0 },
+  uploadCount: { type: Number, default: 0 },
+  maxUpload: { type: Number, default: 3 },
+  maxDownload: { type: Number, default: 5 },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
+  lastActivity: { type: Date, default: Date.now },
 });
 const User = mongoose.model("User", userSchema);
 
+const songSchema = new mongoose.Schema({
+  title: String,
+  artist: String,
+  description: String,
+  bpm: Number,
+  key: String,
+  mode: String,
+  type: String,
+  subtype: String,
+  tags: [String],
+  soundType: String,
+  filePath: String,
+  likes: { type: Number, default: 0 },
+  downloads: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+});
+const Song = mongoose.model("Song", songSchema);
+
+// ================= JWT Middleware =================
+const verifyToken = (req, res, next) => {
+  const token = req.headers["authorization"]?.split(" ")[1]; // Bearer <token>
+  if (!token) return res.status(401).json({ message: "No token" });
+
+  jwt.verify(token, process.env.JWT_SECRET || "secret", (err, decoded) => {
+    if (err) return res.status(403).json({ message: "Invalid token" });
+    req.userId = decoded.id;
+    next();
+  });
+};
+
+const isAdmin = async (req, res, next) => {
+  const user = await User.findById(req.userId);
+  if (!user) return res.status(404).json({ message: "User not found" });
+  if (user.role !== "admin")
+    return res.status(403).json({ message: "Admin only" });
+  next();
+};
+
+// ================= Auth Routes =================
 // Register
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const existing = await User.findOne({ email });
-    if (existing)
+    if (await User.findOne({ email }))
       return res.status(400).json({ message: "Email already registered" });
 
     const hash = await bcrypt.hash(password, 10);
     const newUser = await User.create({ username, email, password: hash });
     res.json({ message: "Register success", user: newUser });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -64,23 +109,21 @@ app.post("/api/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(400).json({ message: "Invalid password" });
+    if (!(await bcrypt.compare(password, user.password)))
+      return res.status(400).json({ message: "Invalid password" });
 
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET || "secret",
-      {
-        expiresIn: "7d",
-      }
+      { expiresIn: "7d" }
     );
     res.json({ message: "Login success", token, user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// Passport Google (optional)
+// ================= Google OAuth =================
 app.use(
   session({
     secret: process.env.JWT_SECRET || "mySecretKey",
@@ -106,60 +149,44 @@ passport.use(
             username: profile.displayName,
             email: profile.emails?.[0]?.value,
             googleId: profile.id,
-            picture: profile.photos?.[0]?.value, // ✅ เก็บรูปโปรไฟล์ Google
+            picture: profile.photos?.[0]?.value,
           });
         }
-        return done(null, user);
+        done(null, user);
       } catch (err) {
-        return done(err, null);
+        done(err, null);
       }
     }
   )
 );
 
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser(async (id, done) => {
-  const user = await User.findById(id);
-  done(null, user);
-});
+passport.deserializeUser(async (id, done) =>
+  done(null, await User.findById(id))
+);
 
-// --- Google Auth Routes ---
+// Google routes
 app.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
 app.get(
   "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/" }),
+  passport.authenticate("google", { session: false, failureRedirect: "/" }),
   (req, res) => {
-    res.redirect("http://localhost:5173/"); // ✅ กลับหน้า React
+    // ส่ง JWT กลับ frontend แทน redirect ปกติ
+    const token = jwt.sign(
+      { id: req.user._id },
+      process.env.JWT_SECRET || "secret",
+      { expiresIn: "7d" }
+    );
+    res.redirect(`http://localhost:5173/?token=${token}`);
   }
 );
 
-// --- ดึงข้อมูลผู้ใช้ปัจจุบัน (สำหรับ React ใช้ตอนโหลดเว็บ) ---
-app.get("/auth/user", (req, res) => {
-  if (req.user) {
-    res.json(req.user);
-  } else {
-    res.status(401).json({ message: "Not logged in" });
-  }
-});
-
-// =============================
-// 🎵 SONG SYSTEM
-// =============================
-const musicPath = path.join("uploads/music");
-if (!fs.existsSync(musicPath)) fs.mkdirSync(musicPath, { recursive: true });
-
-// =========================
-// SONG model + multer
-// =========================
-const uploadsDir = path.join(__dirname, "uploads", "music");
+// ================= Song System =================
+const uploadsDir = path.join(__dirname, "uploads/music");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -168,157 +195,141 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const songSchema = new mongoose.Schema({
-  title: String,
-  artist: String,
-  description: String,
-  bpm: Number,
-  key: String,
-  mode: String,
-  type: String,
-  subtype: String,
-  tags: [String], // ✅ เปลี่ยนเป็น Array
-  soundType: String,
-  filePath: String,
-  likes: { type: Number, default: 0 },
-  downloads: { type: Number, default: 0 },
-  createdAt: { type: Date, default: Date.now },
-});
-
-const Song = mongoose.model("Song", songSchema);
-
 // Upload song
-app.post("/api/upload", upload.single("music"), async (req, res) => {
-  try {
-    if (!req.file)
-      return res.status(400).json({ message: "No music file uploaded" });
+app.post(
+  "/api/upload",
+  verifyToken,
+  upload.single("music"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.role === "user" && user.uploadCount >= user.maxUpload)
+        return res.status(403).json({ message: "Upload limit reached" });
 
-    // save relative path that matches static serving below
-    const relativePath = path
-      .join("uploads", "music", req.file.filename)
-      .replace(/\\/g, "/");
+      if (!req.file)
+        return res.status(400).json({ message: "No file uploaded" });
 
-    const newSong = await Song.create({
-      title: req.body.title || "",
-      artist: req.body.artist || "",
-      description: req.body.description || "",
-      bpm: req.body.bpm ? Number(req.body.bpm) : undefined,
-      key: req.body.key || "",
-      mode: req.body.mode || "",
-      type: req.body.type || "",
-      subtype: req.body.subtype || "",
-      tags: req.body.tags || "",
-      soundType: req.body.soundType || "",
-      filePath: relativePath,
-    });
+      const tags =
+        typeof req.body.tags === "string" ? JSON.parse(req.body.tags) : [];
+      const song = await Song.create({
+        title: req.body.title,
+        artist: req.body.artist,
+        description: req.body.description,
+        bpm: Number(req.body.bpm) || 0,
+        key: req.body.key || "",
+        mode: req.body.mode || "",
+        type: req.body.type || "",
+        subtype: req.body.subtype || "",
+        tags,
+        soundType: req.body.soundType || "",
+        filePath: `uploads/music/${req.file.filename}`,
+      });
 
-    res.json({ message: "Upload success", song: newSong });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+      user.uploadCount += 1;
+      await user.save();
+
+      res.json({ message: "Upload success", song });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
   }
+);
+
+// Like & Download
+app.post("/api/songs/:id/like", verifyToken, async (req, res) => {
+  const song = await Song.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { likes: 1 } },
+    { new: true }
+  );
+  res.json(song);
 });
 
-// Get all songs
-app.get("/api/songs", async (req, res) => {
+app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
   try {
-    const songs = await Song.find().sort({ createdAt: -1 });
-    res.json(songs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const user = await User.findById(req.userId);
+    if (user.role === "user" && user.downloadCount >= user.maxDownload)
+      return res.status(403).json({ message: "Download limit reached" });
 
-app.use("/uploads/music", express.static("uploads/music"));
-
-// Serve static files
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// Like song (increment)
-app.post("/api/songs/:id/like", async (req, res) => {
-  try {
-    const song = await Song.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { likes: 1 } },
-      { new: true }
-    );
-    res.json(song);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Download increment
-app.post("/api/songs/:id/download", async (req, res) => {
-  try {
     const song = await Song.findByIdAndUpdate(
       req.params.id,
       { $inc: { downloads: 1 } },
       { new: true }
     );
+
+    user.downloadCount += 1;
+    await user.save();
+
     res.json(song);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// Top lists
+// Get songs
+app.get("/api/songs", async (req, res) => {
+  const songs = await Song.find().sort({ createdAt: -1 });
+  res.json(songs);
+});
+
 app.get("/api/songs/top-likes", async (req, res) => {
-  try {
-    const songs = await Song.find().sort({ likes: -1 }).limit(5);
-    res.json(songs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const songs = await Song.find().sort({ likes: -1 }).limit(5);
+  res.json(songs);
 });
+
 app.get("/api/songs/top-downloads", async (req, res) => {
+  const songs = await Song.find().sort({ downloads: -1 }).limit(5);
+  res.json(songs);
+});
+
+// Admin: view & update role
+app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
+  const users = await User.find().select("-password");
+  res.json(users);
+});
+
+app.put("/api/admin/users/:id/role", verifyToken, isAdmin, async (req, res) => {
+  const { role } = req.body;
+  if (!["user", "admin"].includes(role))
+    return res.status(400).json({ message: "Invalid role" });
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { role },
+    { new: true }
+  ).select("-password");
+  res.json({ message: "Role updated", user });
+});
+
+// ================= User Limits =================
+app.get("/api/user/:id/limits", async (req, res) => {
   try {
-    const songs = await Song.find().sort({ downloads: -1 }).limit(5);
-    res.json(songs);
+    const user = await User.findById(req.params.id).select(
+      "uploadCount downloadCount maxUpload maxDownload"
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// start server
+// ================= Current User Info =================
+app.get("/auth/user", async (req, res) => {
+  try {
+    const token = req.headers["authorization"]?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "No token" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Start Server =================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
-
-// =========================
-// TAGS ดึงแท็กทั้งหมด
-app.get("/api/tags", async (req, res) => {
-  try {
-    const tags = await Song.find().distinct("tags");
-    res.json(tags.filter((t) => t && t.trim() !== ""));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// =========================
-// SEARCH endpoint
-app.get("/api/songs/search", async (req, res) => {
-  try {
-    const { q, tag } = req.query;
-
-    let query = {};
-
-    if (q) {
-      query = {
-        $or: [
-          { title: { $regex: q, $options: "i" } },
-          { artist: { $regex: q, $options: "i" } },
-          { description: { $regex: q, $options: "i" } },
-          { tags: { $regex: q, $options: "i" } },
-        ],
-      };
-    }
-
-    if (tag) {
-      query = { tags: tag };
-    }
-
-    const songs = await Song.find(query);
-    res.json(songs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

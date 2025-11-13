@@ -145,3 +145,12 @@ body {
   align-items: center;
 }
 
+.usage-info {
+  font-size: 14px;
+  color: #eee;
+  margin-right: 15px;
+  opacity: 0.9;
+}
+
+
+

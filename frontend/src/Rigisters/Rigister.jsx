@@ -14,9 +14,18 @@ function Rigister() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/register", form);
-      alert("✅ Register success!");
-      navigate("/login"); // ✅ เปลี่ยนจาก window.location.href
+      const res = await axios.post("http://localhost:5000/api/register", form);
+
+      // ✅ Auto login
+      const loginRes = await axios.post("http://localhost:5000/api/login", {
+        email: form.email,
+        password: form.password,
+      });
+
+      localStorage.setItem("token", loginRes.data.token);
+      localStorage.setItem("user", JSON.stringify(loginRes.data.user));
+      alert("✅ Register & Login success!");
+      navigate("/dashboard"); // ไป dashboard ทันที
     } catch (err) {
       alert(err.response?.data?.message || "Register failed");
     }

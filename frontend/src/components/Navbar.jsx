@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import logo from "../assets/logo.png";
 
@@ -9,40 +9,63 @@ function Navbar() {
   const [volume, setVolume] = useState(0.5);
   const [showSlider, setShowSlider] = useState(false);
   const [user, setUser] = useState(null);
+  const [limits, setLimits] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // ✅ โหลดข้อมูลผู้ใช้จาก localStorage หรือ session (Google)
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      fetch("http://localhost:5000/auth/user", { credentials: "include" })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data._id) {
-            localStorage.setItem("user", JSON.stringify(data));
-            setUser(data);
-          }
-        })
-        .catch(() => {});
+  // โหลด limits ของ user
+  const fetchLimits = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/user/${id}/limits`);
+      const data = await res.json();
+      setLimits(data);
+    } catch (err) {
+      console.error("Error fetching limits:", err);
     }
+  };
+
+  // โหลด user + limits ตอน mount
+  useEffect(() => {
+    const loadUser = async () => {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setUser(parsed);
+        await fetchLimits(parsed._id); // ✅ โหลด limits
+      } else {
+        setUser(null);
+        setLimits(null);
+      }
+    };
+
+    loadUser();
+
+    // อัปเดต user หลัง login สำเร็จ
+    window.addEventListener("userLoggedIn", loadUser);
+
+    return () => {
+      window.removeEventListener("userLoggedIn", loadUser);
+    };
   }, []);
 
+  // ปรับระดับเสียง
   const handleVolumeChange = (value) => {
     const newVolume = parseFloat(value);
     setVolume(newVolume);
-    document.querySelectorAll("audio, video").forEach((el) => {
-      el.volume = newVolume;
-    });
+    document
+      .querySelectorAll("audio, video")
+      .forEach((el) => (el.volume = newVolume));
   };
 
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     alert("🚪 ออกจากระบบเรียบร้อย");
     setUser(null);
+    setLimits(null);
     navigate("/");
+    window.dispatchEvent(new Event("userLoggedOut"));
   };
 
   return (
@@ -54,7 +77,6 @@ function Navbar() {
       </div>
 
       <div className="header-right">
-        {/* 🔊 ปุ่มปรับเสียง */}
         <div className="volume-container">
           <button
             className="icon-button"
@@ -63,11 +85,6 @@ function Navbar() {
           >
             🔊
           </button>
-
-          <Link to="/upload" className="nav-link">
-            Upload
-          </Link>
-
           {showSlider && (
             <input
               type="range"
@@ -81,12 +98,23 @@ function Navbar() {
             />
           )}
         </div>
+
+        <Link to="/upload" className="nav-link">
+          Upload
+        </Link>
         <Link to="/premium" className="nav-link">
           Premium
         </Link>
         <Link to="/about" className="nav-link">
-          notifications
+          Notifications
         </Link>
+
+        {limits && (
+          <div className="usage-info">
+            Uploads: {limits.uploadCount}/{limits.maxUpload} | Downloads:{" "}
+            {limits.downloadCount}/{limits.maxDownload}
+          </div>
+        )}
 
         {user ? (
           <>
@@ -111,21 +139,6 @@ function Navbar() {
             </Link>
           </>
         )}
-
-        {/* เมนูทางขวา */}
-        <a href="/premium" className="nav-link">
-          Premium
-        </a>
-        <a href="/about" className="nav-link">
-          Notification
-        </a>
-        <a href="/profile" className="nav-link">
-          Profile
-        </a>
-        <a href="/register" className="nav-link">
-          Sing-in
-        </a>
-        <button class="gradient-login-button">Log-In</button>
       </div>
     </header>
   );
