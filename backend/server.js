@@ -27,6 +27,8 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ================= MongoDB =================
+
+// MongoDB
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
@@ -333,3 +335,73 @@ app.get("/auth/user", async (req, res) => {
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+
+// =========================
+// TAGS ดึงแท็กทั้งหมด
+app.get("/api/tags", async (req, res) => {
+  try {
+    const tags = await Song.find().distinct("tags");
+    res.json(tags.filter((t) => t && t.trim() !== ""));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// =========================
+// SEARCH endpoint
+app.get("/api/songs/search", async (req, res) => {
+  try {
+    const { q, tag } = req.query;
+
+    let query = {};
+
+    if (q) {
+      query = {
+        $or: [
+          { title: { $regex: q, $options: "i" } },
+          { artist: { $regex: q, $options: "i" } },
+          { description: { $regex: q, $options: "i" } },
+          { tags: { $regex: q, $options: "i" } },
+        ],
+      };
+    }
+
+    if (tag) {
+      query = { tags: tag };
+    }
+
+    const songs = await Song.find(query);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Get song by ID
+app.get("/api/songs/:id", async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ message: "Song not found" });
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// อนุญาต frontend ทุก origin ที่ต้องการ
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://localhost:5173"], // frontend
+    credentials: true,
+  })
+);
+
+// Serve static files พร้อม header CORS
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*"); // อนุญาตทุกโดเมน
+    next();
+  },
+  express.static(path.join(__dirname, "uploads"))
+);
