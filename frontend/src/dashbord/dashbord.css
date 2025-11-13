@@ -1,0 +1,68 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard-container {
+  padding: 12px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background-color: #4D556C;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  max-width: 650px;
+  width: 90%;
+  margin: 20px auto;
+  color: #f9f9f9;
+}
+
+.dashboard-header {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.filter-buttons {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 12px;
+}
+
+.filter-btn {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #fff;
+  background-color: #666;
+  font-size: 12px;
+  transition: 0.2s;
+}
+
+.filter-btn.purple {
+  background-color: #A56EFF;
+}
+
+.filter-btn.blue {
+  background-color: #00C6FF;
+}
+
+.filter-btn.pink {
+  background-color: #FF7AB8;
+}
+
+.filter-btn.active {
+  border: 2px solid #fff;
+}
+
+.chart-box {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  height: 300px;
+}
