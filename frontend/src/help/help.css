@@ -36,3 +36,38 @@ body {
   text-align: left;
 }
 
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #fff;
+}
+
+.help-container {
+  padding: 6px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background-color: #4D556C;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 15px auto;
+  height: 170px;
+  overflow-y: auto;
+  color: #f9f9f9;
+  font-family: Arial, sans-serif;
+}
+
+.help-header {
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+  color: #fff;
+}
+
+.help-container p {
+  font-size: 12px;
+  line-height: 1.4;
+}

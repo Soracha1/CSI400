@@ -239,6 +239,8 @@ function SongList({ searchTerm }) {
         >
           ⬇ ดาวน์โหลด
         </button>
+
+       
       </div>
 
       {/* Progress Bar */}
@@ -252,6 +254,8 @@ function SongList({ searchTerm }) {
           }}
         ></div>
       </div>
+
+      
 
       <audio
         id={`audio-${song._id}`}
@@ -281,7 +285,7 @@ function SongList({ searchTerm }) {
           : searchTerm
           ? "เพลงที่ค้นหา"
           : "เพลงทั้งหมด"}
-        
+   
       </h2>
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
 

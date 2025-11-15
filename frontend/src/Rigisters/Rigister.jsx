@@ -16,7 +16,6 @@ function Rigister() {
     try {
       const res = await axios.post("http://localhost:5000/api/register", form);
 
-      // ✅ Auto login
       const loginRes = await axios.post("http://localhost:5000/api/login", {
         email: form.email,
         password: form.password,
@@ -25,7 +24,7 @@ function Rigister() {
       localStorage.setItem("token", loginRes.data.token);
       localStorage.setItem("user", JSON.stringify(loginRes.data.user));
       alert("✅ Register & Login success!");
-      navigate("/dashboard"); // ไป dashboard ทันที
+      navigate("/dashboard");
     } catch (err) {
       alert(err.response?.data?.message || "Register failed");
     }
@@ -36,60 +35,65 @@ function Rigister() {
   };
 
   return (
-    <div className="i-container">
-      <form className="i-form" onSubmit={handleSubmit}>
-        <div className="i-header">Create an account</div>
+    <div className="i-page-container">
+      <div className="i-container">
+        <form className="i-form" onSubmit={handleSubmit}>
+          <div className="i-header">Create an account</div>
 
-        <label>Username</label>
-        <input
-          type="text"
-          name="username"
-          value={form.username}
-          onChange={handleChange}
-          required
-        />
-
-        <label>Email</label>
-        <input
-          type="email"
-          name="email"
-          value={form.email}
-          onChange={handleChange}
-          required
-        />
-
-        <label>Password</label>
-        <div className="password-container">
+          <label>Username</label>
           <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            value={form.password}
+            type="text"
+            name="username"
+            value={form.username}
             onChange={handleChange}
             required
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? "Hide" : "Show"}
-          </button>
-        </div>
 
-        <button type="submit" className="create-btn">
-          Create account
-        </button>
-
-        <button type="button" onClick={googleSignup} className="google-btn">
-          <img
-            src="https://cdn-icons-png.flaticon.com/512/300/300221.png"
-            alt="google"
-            width={14}
-            style={{ marginRight: 8 }}
+          <label>Email</label>
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            required
           />
-          Sign up with Google
-        </button>
 
-        <div className="i-login-text">
-          Already have an account? <a href="/login">Log in</a>
-        </div>
-      </form>
+          <label>Password</label>
+          <div className="password-container">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+            <button
+              type="button"
+              className="toggle-password"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          <button type="submit" className="create-btn">
+            Create account
+          </button>
+
+          <button type="button" className="google-btn" onClick={googleSignup}>
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/300/300221.png"
+              alt="google"
+              width={14}
+            />
+            Sign up with Google
+          </button>
+
+          <div className="i-login-text">
+            Already have an account? <a href="/login">Log in</a>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
