@@ -337,13 +337,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
 
-
-
-
-// app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
-
-app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
-
 // =========================
 // TAGS ดึงแท็กทั้งหมด
 app.get("/api/tags", async (req, res) => {
