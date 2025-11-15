@@ -241,6 +241,24 @@ function SongList({ searchTerm }) {
         </button>
 
        
+        <button
+          className="song-download-btn"
+          onClick={() => handleDownload(song)}
+        >
+          ⬇ ดาวน์โหลด
+        </button>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="song-progress">
+        <div
+          className="progress-fill"
+          style={{
+            width: durations[song._id]
+              ? `${(currentTimes[song._id] / durations[song._id]) * 100}%`
+              : "0%",
+          }}
+        ></div>
       </div>
 
       {/* Progress Bar */}
@@ -286,6 +304,13 @@ function SongList({ searchTerm }) {
           ? "เพลงที่ค้นหา"
           : "เพลงทั้งหมด"}
    
+        
+        🎵{" "}
+        {filterTag
+          ? `เพลงในหมวด "${filterTag}"`
+          : searchTerm
+          ? "ผลการค้นหา"
+          : "เพลงทั้งหมด"}
       </h2>
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
 
