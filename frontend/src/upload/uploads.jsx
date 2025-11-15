@@ -1,6 +1,7 @@
 // UploadSong.jsx
 import React, { useState } from "react";
 import axios from "axios";
+import Swal from "sweetalert2"; // ✅ เพิ่ม SweetAlert2
 import "./upload.css";
 
 // ================== Constants ==================
@@ -190,9 +191,12 @@ function UploadSong({ fetchLimits }) {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!user || !token) return alert("กรุณาเข้าสู่ระบบก่อนอัปโหลด");
-    if (!file) return alert("กรุณาเลือกไฟล์เพลงก่อน!");
-    if (form.tags.length < 4) return alert("กรุณาเลือก Tag อย่างน้อย 4 อัน");
+    if (!user || !token)
+      return Swal.fire("กรุณาเข้าสู่ระบบก่อนอัปโหลด", "", "warning");
+    if (!file)
+      return Swal.fire("กรุณาเลือกไฟล์เพลงก่อน!", "", "warning");
+    if (form.tags.length < 4)
+      return Swal.fire("กรุณาเลือก Tag อย่างน้อย 4 อัน", "", "warning");
 
     try {
       const formData = new FormData();
@@ -215,7 +219,8 @@ function UploadSong({ fetchLimits }) {
         }
       );
 
-      alert(res.data.message || "✅ อัปโหลดเพลงสำเร็จ!");
+      Swal.fire(res.data.message || "✅ อัปโหลดเพลงสำเร็จ!", "", "success");
+
       if (fetchLimits) fetchLimits(user._id);
 
       // Reset form
@@ -234,7 +239,11 @@ function UploadSong({ fetchLimits }) {
       setFile(null);
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "❌ อัปโหลดไม่สำเร็จ");
+      Swal.fire(
+        err.response?.data?.message || "❌ อัปโหลดไม่สำเร็จ",
+        "",
+        "error"
+      );
     }
   };
 

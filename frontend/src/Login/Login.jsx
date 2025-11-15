@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import Swal from "sweetalert2"; // ✅ เพิ่ม sweetalert2
 import "./Login.css";
 
 function Login() {
@@ -9,7 +10,7 @@ function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // ✅ รองรับ Google OAuth callback
+  // Google OAuth callback
   useEffect(() => {
     const token = searchParams.get("token");
     if (!token) return;
@@ -23,13 +24,21 @@ function Login() {
       })
       .then((res) => {
         localStorage.setItem("user", JSON.stringify(res.data));
-        alert("✅ Google login success!");
+        Swal.fire({
+          icon: "success",
+          title: "Login success!",
+          text: "Google login successful",
+        });
         window.dispatchEvent(new Event("userLoggedIn"));
         navigate("/dashboard");
       })
       .catch((err) => {
         console.error(err);
-        alert("⚠️ Failed to fetch user info from Google login");
+        Swal.fire({
+          icon: "error",
+          title: "Login failed",
+          text: "Failed to fetch user info from Google login",
+        });
       });
   }, [searchParams, navigate]);
 
@@ -53,12 +62,20 @@ function Login() {
 
       localStorage.setItem("user", JSON.stringify(userRes.data));
 
-      alert("✅ Login success!");
+      Swal.fire({
+        icon: "success",
+        title: "Login success!",
+        text: "You have successfully logged in",
+      });
       window.dispatchEvent(new Event("userLoggedIn"));
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Login failed");
+      Swal.fire({
+        icon: "error",
+        title: "Login failed",
+        text: err.response?.data?.message || "Login failed",
+      });
     }
   };
 

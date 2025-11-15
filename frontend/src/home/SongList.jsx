@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2"; // แจ้งเตือน
 import "./SongList.css";
 
 function SongList({ searchTerm }) {
@@ -17,6 +18,8 @@ function SongList({ searchTerm }) {
   const navigate = useNavigate();
   const songsPerPage = 5;
 
+  const token = localStorage.getItem("token");
+
   useEffect(() => {
     loadAllData();
   }, []);
@@ -28,18 +31,6 @@ function SongList({ searchTerm }) {
   useEffect(() => {
     setFilterTag(null);
   }, [searchTerm]);
-
-  useEffect(() => {
-    loadAllData();
-  }, []);
-  useEffect(() => {
-    setCurrentPage(0);
-  }, [searchTerm, filterTag]);
-  useEffect(() => {
-    if (searchTerm) setFilterTag(null);
-  }, [searchTerm]);
-
-  const token = localStorage.getItem("token");
 
   const loadAllData = async () => {
     try {
@@ -76,11 +67,51 @@ function SongList({ searchTerm }) {
 
   const handleDownload = async (song) => {
     try {
-      // ดาวน์โหลดไฟล์
+      // ตรวจสอบว่า login หรือยัง
+      if (!token) {
+        Swal.fire({
+          icon: "error",
+          title: "คุณยังไม่ได้เข้าสู่ระบบ",
+          text: "กรุณาเข้าสู่ระบบก่อนดาวน์โหลดเพลง",
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+        return;
+      }
+
+      // ตรวจสอบโควต้าจาก backend
+      const quotaRes = await axios.get(
+        `http://localhost:5000/api/users/download-quota`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!quotaRes.data.allowed) {
+        Swal.fire({
+          icon: "error",
+          title: "หมดโควต้าดาวน์โหลดแล้ว",
+          text: "คุณไม่สามารถดาวน์โหลดเพลงได้อีกในตอนนี้",
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+        return;
+      }
+
+      // ดาวน์โหลดเพลงเป็น blob
+      const response = await axios.get(`http://localhost:5000/${song.filePath}`, {
+        responseType: "blob",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
-      link.href = `http://localhost:5000/${song.filePath}`;
-      link.download = `${song.title}.mp3`;
+      link.href = url;
+      link.setAttribute("download", `${song.title}.mp3`);
+      document.body.appendChild(link);
       link.click();
+      link.remove();
 
       // เพิ่ม download count ใน backend
       await axios.post(
@@ -89,10 +120,29 @@ function SongList({ searchTerm }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      await axios.post(`http://localhost:5000/api/songs/${song._id}/download`);
+      // แจ้งเตือนดาวน์โหลดสำเร็จ
+      Swal.fire({
+        icon: "success",
+        title: "ดาวน์โหลดเพลงสำเร็จ 🎵",
+        text: `คุณดาวน์โหลดเพลง "${song.title}" เรียบร้อยแล้ว`,
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
+
       loadAllData();
     } catch (err) {
       console.error("Download error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: `ไม่สามารถดาวน์โหลดเพลง "${song.title}" ได้`,
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
     }
   };
 
@@ -112,7 +162,6 @@ function SongList({ searchTerm }) {
       audio.play();
       setCurrentPlaying(id);
 
-      // อัปเดตเวลาเล่น
       const interval = setInterval(() => {
         setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
       }, 200);
@@ -224,26 +273,21 @@ function SongList({ searchTerm }) {
 
       <div className="song-controls" onClick={(e) => e.stopPropagation()}>
         <button
-          className={`song-play-btn ${
-            currentPlaying === song._id ? "active" : ""
-          }`}
-          onClick={() => togglePlay(song._id)}
+          className={`song-play-btn ${currentPlaying === song._id ? "active" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay(song._id);
+          }}
         >
           {currentPlaying === song._id ? "⏹ หยุด" : "▶ เล่น"}
         </button>
-      
 
         <button
           className="song-download-btn"
-          onClick={() => handleDownload(song)}
-        >
-          ⬇ ดาวน์โหลด
-        </button>
-
-       
-        <button
-          className="song-download-btn"
-          onClick={() => handleDownload(song)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDownload(song);
+          }}
         >
           ⬇ ดาวน์โหลด
         </button>
@@ -260,20 +304,6 @@ function SongList({ searchTerm }) {
           }}
         ></div>
       </div>
-
-      {/* Progress Bar */}
-      <div className="song-progress">
-        <div
-          className="progress-fill"
-          style={{
-            width: durations[song._id]
-              ? `${(currentTimes[song._id] / durations[song._id]) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      
 
       <audio
         id={`audio-${song._id}`}
@@ -302,14 +332,6 @@ function SongList({ searchTerm }) {
           ? `เพลงในหมวด "${filterTag}"`
           : searchTerm
           ? "เพลงที่ค้นหา"
-          : "เพลงทั้งหมด"}
-   
-        
-        🎵{" "}
-        {filterTag
-          ? `เพลงในหมวด "${filterTag}"`
-          : searchTerm
-          ? "ผลการค้นหา"
           : "เพลงทั้งหมด"}
       </h2>
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>

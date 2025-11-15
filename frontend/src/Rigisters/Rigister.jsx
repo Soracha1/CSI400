@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2"; // ✅ เพิ่ม sweetalert2
 import "./Rigister.css";
 
 function Rigister() {
@@ -14,19 +15,22 @@ function Rigister() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/api/register", form);
+      await axios.post("http://localhost:5000/api/register", form);
 
-      const loginRes = await axios.post("http://localhost:5000/api/login", {
-        email: form.email,
-        password: form.password,
+      Swal.fire({
+        icon: "success",
+        title: "Registration successful!",
+        text: "You can now log in with your account",
+        confirmButtonText: "Go to Login",
+      }).then(() => {
+        navigate("/login");
       });
-
-      localStorage.setItem("token", loginRes.data.token);
-      localStorage.setItem("user", JSON.stringify(loginRes.data.user));
-      alert("✅ Register & Login success!");
-      navigate("/dashboard");
     } catch (err) {
-      alert(err.response?.data?.message || "Register failed");
+      Swal.fire({
+        icon: "error",
+        title: "Registration failed",
+        text: err.response?.data?.message || "Something went wrong",
+      });
     }
   };
 

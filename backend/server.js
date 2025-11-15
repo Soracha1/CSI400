@@ -11,6 +11,8 @@ import jwt from "jsonwebtoken";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Server } from "socket.io";
+import http from "http";
 
 dotenv.config();
 const app = express();
@@ -27,12 +29,20 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ================= MongoDB =================
-
-// MongoDB
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
+
+// ================= Notification Model =================
+const notificationSchema = new mongoose.Schema({
+  type: { type: String, enum: ["upload", "download"], required: true },
+  message: { type: String, required: true },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  song: { type: mongoose.Schema.Types.ObjectId, ref: "Song" },
+  createdAt: { type: Date, default: Date.now },
+});
+const Notification = mongoose.model("Notification", notificationSchema);
 
 // ================= Models =================
 const userSchema = new mongoose.Schema({
@@ -70,7 +80,7 @@ const Song = mongoose.model("Song", songSchema);
 
 // ================= JWT Middleware =================
 const verifyToken = (req, res, next) => {
-  const token = req.headers["authorization"]?.split(" ")[1]; // Bearer <token>
+  const token = req.headers["authorization"]?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "No token" });
 
   jwt.verify(token, process.env.JWT_SECRET || "secret", (err, decoded) => {
@@ -167,7 +177,6 @@ passport.deserializeUser(async (id, done) =>
   done(null, await User.findById(id))
 );
 
-// Google routes
 app.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -177,7 +186,6 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/" }),
   (req, res) => {
-    // ส่ง JWT กลับ frontend แทน redirect ปกติ
     const token = jwt.sign(
       { id: req.user._id },
       process.env.JWT_SECRET || "secret",
@@ -186,6 +194,39 @@ app.get(
     res.redirect(`http://localhost:5173/?token=${token}`);
   }
 );
+
+// ================= Notification API =================
+app.get("/api/notifications", async (req, res) => {
+  try {
+    const notifications = await Notification.find()
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .populate("user", "username picture")
+      .populate("song", "title artist");
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post("/api/notifications", async (req, res) => {
+  try {
+    const { type, message, userId, songId } = req.body;
+    const notif = await Notification.create({
+      type,
+      message,
+      user: userId,
+      song: songId,
+    });
+
+    // ส่ง realtime ไปทุก client
+    io.emit("notification", notif);
+
+    res.json(notif);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // ================= Song System =================
 const uploadsDir = path.join(__dirname, "uploads/music");
@@ -197,7 +238,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Upload song
 app.post(
   "/api/upload",
   verifyToken,
@@ -231,6 +271,15 @@ app.post(
       user.uploadCount += 1;
       await user.save();
 
+      // ส่ง notification realtime
+      io.emit("notification", {
+        type: "upload",
+        message: `${user.username} uploaded ${song.title}`,
+        user: user._id,
+        song: song._id,
+        createdAt: new Date(),
+      });
+
       res.json({ message: "Upload success", song });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -238,7 +287,7 @@ app.post(
   }
 );
 
-// Like & Download
+// ================= Like & Download =================
 app.post("/api/songs/:id/like", verifyToken, async (req, res) => {
   const song = await Song.findByIdAndUpdate(
     req.params.id,
@@ -263,13 +312,22 @@ app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
     user.downloadCount += 1;
     await user.save();
 
+    // ส่ง notification realtime
+    io.emit("notification", {
+      type: "download",
+      message: `${user.username} downloaded ${song.title}`,
+      user: user._id,
+      song: song._id,
+      createdAt: new Date(),
+    });
+
     res.json(song);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Get songs
+// ================= Songs GET =================
 app.get("/api/songs", async (req, res) => {
   const songs = await Song.find().sort({ createdAt: -1 });
   res.json(songs);
@@ -285,7 +343,7 @@ app.get("/api/songs/top-downloads", async (req, res) => {
   res.json(songs);
 });
 
-// Admin: view & update role
+// ================= Admin Routes =================
 app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
   const users = await User.find().select("-password");
   res.json(users);
@@ -332,13 +390,7 @@ app.get("/auth/user", async (req, res) => {
   }
 });
 
-// ================= Start Server =================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
-
-// =========================
-// TAGS ดึงแท็กทั้งหมด
+// ================= Tags =================
 app.get("/api/tags", async (req, res) => {
   try {
     const tags = await Song.find().distinct("tags");
@@ -347,8 +399,8 @@ app.get("/api/tags", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// =========================
-// SEARCH endpoint
+
+// ================= Search =================
 app.get("/api/songs/search", async (req, res) => {
   try {
     const { q, tag } = req.query;
@@ -376,6 +428,7 @@ app.get("/api/songs/search", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // Get song by ID
 app.get("/api/songs/:id", async (req, res) => {
   try {
@@ -387,20 +440,35 @@ app.get("/api/songs/:id", async (req, res) => {
   }
 });
 
-// อนุญาต frontend ทุก origin ที่ต้องการ
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"], // frontend
-    credentials: true,
-  })
-);
-
-// Serve static files พร้อม header CORS
+// ================= Serve uploads with CORS =================
 app.use(
   "/uploads",
   (req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*"); // อนุญาตทุกโดเมน
+    res.header("Access-Control-Allow-Origin", "*");
     next();
   },
   express.static(path.join(__dirname, "uploads"))
 );
+
+// ================= Socket.IO =================
+// สร้าง HTTP server
+const server = http.createServer(app);
+
+// สร้าง Socket.IO server
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("✅ Socket connected:", socket.id);
+  socket.on("disconnect", () =>
+    console.log("❌ Socket disconnected:", socket.id)
+  );
+});
+
+// ================= Start Server =================
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
