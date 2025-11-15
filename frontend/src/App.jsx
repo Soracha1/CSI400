@@ -12,10 +12,10 @@ import Rigister from "./Rigisters/Rigister";
 import Profile from "./Profiles/Profile";
 import EditProfile from "./editprofile/editprofile";
 import Primium from "./primium/member";
-// import Help from "./help/Help";
-// import About from "./help/about/about";
-// import Contact from "./help/contact/contact";
-// import QandA from "./help/q&a/qqa"; // 
+import Help from "./help/Help";
+import About from "./help/about/about";
+import Contact from "./help/contact/contact";
+import QandA from "./help/q&a/qqa"; 
 
 
 
@@ -61,10 +61,10 @@ function App() {
           <Route path="/upload" element={<UploadSong />} />
           <Route path="/premium" element={<Primium />} />
           <Route path="/song/:id" element={<SongDetail />} />
-          {/* <Route path="/about" element={<About />} /> */}
-          {/* <Route path="/contact" element={<Contact />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
          <Route path="/qa" element={<QandA />} />
-          <Route path="/help" element={<Help />} /> */}
+          <Route path="/help" element={<Help />} />
 
           
         </Routes>

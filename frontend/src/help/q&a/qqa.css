@@ -1,38 +1,69 @@
-body {
+/* Container ของ Q&A */
+.qqa-container {
   display: flex;
-  justify-content: center; /* จัดกึ่งกลางแนวนอน */
-  align-items: center;     /* จัดกึ่งกลางแนวตั้ง */
-  height: 100vh;           /* ให้ความสูงเต็มหน้าจอ */
-  margin: 0;               /* ลบ margin พื้นฐาน */
-  background-color: #fff; /* ตัวอย่างพื้นหลัง */
+  justify-content: center;
+  align-items: flex-start;
+  padding: 120px ; /* เว้นบน-ล่างให้เห็น Navbar/Footer */
+  background-color: #2b2f3a;
+  min-height: 20px;
+  box-sizing: border-box;
 }
 
-.qna-container {
-  padding: 6px;
-  border: 1px solid #333; /* เพิ่มกรอบ */
-  border-radius: 8px; /* มุมโค้งนิดหน่อย */
-  background-color: #4D556C; /* พื้นหลังอ่อน ๆ */
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1); /* เพิ่มเงาเบาๆ */
-  max-width: 600px; /* จำกัดความกว้าง */
-  margin: 15px auto; /* จัดให้อยู่กึ่งกลางหน้าจอ */
-  height: 170px;
-  overflow-y: auto;  /* 🔸 ให้มีแถบเลื่อนแนวตั้ง */
+/* Card */
+.qqa-card {
+  width: 100%;
+  max-width: 900px;
+  background: linear-gradient(180deg, #2b2f3a 0%, #232428 100%);
+  color: #ffffff;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(11, 14, 20, 0.35);
+  box-sizing: border-box;
+  margin-bottom: 40px; /* เว้น Footer */
 }
 
-.qna-header {
-  font-size: 12px;
-  margin-bottom: 8px;
+/* Header */
+.qqa-header {
+  font-size: 1.6rem;
   text-align: center;
-  color: #222;
+  margin-bottom: 24px;
 }
 
-.qna-list {
-  list-style-type: none;
-  padding: 0;
+/* List */
+.qqa-list {
+  display: grid;
+  gap: 16px;
 }
 
-.qna-list li {
-  margin-bottom: 8px;
-  line-height: 1.4;
-  color: #333;
+.qqa-item {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.qqa-item strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .qqa-container {
+    padding: 100px 12px 60px 12px;
+  }
+
+  .qqa-card {
+    padding: 18px;
+    margin-bottom: 30px;
+  }
+
+  .qqa-header {
+    font-size: 1.25rem;
+  }
+
+  .qqa-item {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
 }

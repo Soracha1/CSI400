@@ -1,55 +1,79 @@
-body {
-  display: flex;
-  justify-content: center; /* จัดกึ่งกลางแนวนอน */
-  align-items: center;     /* จัดกึ่งกลางแนวตั้ง */
-  height: 100vh;           /* ให้ความสูงเต็มหน้าจอ */
-  margin: 0;               /* ลบ margin พื้นฐาน */
-  background-color: #343A4A; /* ตัวอย่างพื้นหลัง */
-}
-
+/* Container ของ Contact */
 .contact-container {
-  padding: 6px;
-  border: 1px solid #333; /* เพิ่มกรอบ */
-  border-radius: 8px; /* มุมโค้งนิดหน่อย */
-  background-color: #4D556C; /* พื้นหลังอ่อน ๆ */
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1); /* เพิ่มเงาเบาๆ */
-  max-width: 600px; /* จำกัดความกว้าง */
-  margin: 15px auto; /* จัดให้อยู่กึ่งกลางหน้าจอ */
-  height: 170px;
-  overflow-y: auto;  /* 🔸 ให้มีแถบเลื่อนแนวตั้ง */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 250px 16px 80px 16px; /* เว้นบน-ล่างให้เห็น Navbar/Footer */
+  background-color: #2b2f3a;
+  min-height: 800px;
+  box-sizing: border-box;
 }
 
-.contact-header {
-  font-size: 12px;
-  margin-bottom: 8px;
-  text-align: center;
+/* Card */
+.contact-card {
+  width: 100%;
+  max-width: 900px;
+  background: linear-gradient(180deg, #2b2f3a 0%, #232428 100%);
   color: #ffffff;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(11, 14, 20, 0.35);
+  box-sizing: border-box;
+  margin-bottom: 40px; /* เว้น Footer */
 }
 
-.contact-list {
-  list-style-type: none;
-  padding: 0;
+/* Header */
+.contact-header {
+  font-size: 1.6rem;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-.contact-list li {
-  margin-bottom: 8px;
-  line-height: 1.4;
-  color: #333;
+/* Text */
+.contact-text {
+  line-height: 1.6;
+  font-size: 1rem;
+  opacity: 0.95;
 }
 
+/* Social Icons */
 .social-icons {
   margin-top: 20px;
   display: flex;
-  justify-content: center; /* 🔸 จัดให้อยู่ตรงกลางแนวนอน */
+  justify-content: center;
   gap: 20px;
 }
 
 .social-icons svg {
-  color: #000; /* สีไอคอน */
+  color: #fff; /* สีไอคอนขาว */
   font-size: 28px;
   transition: color 0.3s;
 }
 
 .social-icons svg:hover {
-  color: #ff0000; /* เปลี่ยนสีเมื่อ hover */
+  color: #ff4d4d; /* สี hover */
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .contact-container {
+    padding: 100px 12px 60px 12px;
+  }
+
+  .contact-card {
+    padding: 18px;
+    margin-bottom: 30px;
+  }
+
+  .contact-header {
+    font-size: 1.25rem;
+  }
+
+  .contact-text {
+    font-size: 0.95rem;
+  }
+
+  .social-icons svg {
+    font-size: 24px;
+  }
 }
