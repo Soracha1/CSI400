@@ -1,0 +1,69 @@
+/* Container ของ Q&A */
+.qqa-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 120px ; /* เว้นบน-ล่างให้เห็น Navbar/Footer */
+  background-color: #2b2f3a;
+  min-height: 20px;
+  box-sizing: border-box;
+}
+
+/* Card */
+.qqa-card {
+  width: 100%;
+  max-width: 900px;
+  background: linear-gradient(180deg, #2b2f3a 0%, #232428 100%);
+  color: #ffffff;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(11, 14, 20, 0.35);
+  box-sizing: border-box;
+  margin-bottom: 40px; /* เว้น Footer */
+}
+
+/* Header */
+.qqa-header {
+  font-size: 1.6rem;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* List */
+.qqa-list {
+  display: grid;
+  gap: 16px;
+}
+
+.qqa-item {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.qqa-item strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .qqa-container {
+    padding: 100px 12px 60px 12px;
+  }
+
+  .qqa-card {
+    padding: 18px;
+    margin-bottom: 30px;
+  }
+
+  .qqa-header {
+    font-size: 1.25rem;
+  }
+
+  .qqa-item {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+}

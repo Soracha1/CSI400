@@ -66,6 +66,19 @@ body {
   transition: background-color 0.3s;
   white-space: nowrap;
 }
+/* กล่องควบคุมเสียง */
+.volume-container {
+  display: flex;
+  align-items: center; /* จัดแนวตรงกลางแนวตั้ง */
+  gap: 8px; /* ระยะห่างระหว่างปุ่มกับ slider */
+  position: relative;
+}
+
+.volume-slider {
+  width: 100px; /* กำหนดความกว้าง slider */
+  display: inline-block; /* ป้องกันขึ้นบรรทัดใหม่ */
+  vertical-align: middle; /* จัดให้ตรงกับปุ่ม */
+}
 
 .login-button:hover {
   background-color: #3ac4e6;
@@ -195,6 +208,24 @@ body {
 .notification-item:hover {
   background: #2c2c44;
 }
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: red;
+  border-radius: 50%;
+  border: 1px solid white;
+}
+
+.notification-item.unread {
+  font-weight: bold;
+}
 
 .notification-empty {
   padding: 12px;
@@ -231,3 +262,52 @@ body {
   }
 }
 
+.notif-icon {
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  color: #4edfff;
+}
+
+.notif-message {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.download-btn {
+  background: #0072ff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.download-btn:hover {
+  background: #00c6ff;
+}
+
+.downloaded-icon {
+  color: #00ff88;
+  margin-left: 6px;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-direction: column;
+}
+
+.notification-content span {
+  font-size: 0.9rem;
+}
+
+.notification-time {
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-top: 2px;
+}

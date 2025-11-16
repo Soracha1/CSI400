@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import "./Navbar.css";
 import logo from "../assets/logo.png";
-import { FaBell } from "react-icons/fa";
+import { FaBell, FaArrowUp, FaArrowDown } from "react-icons/fa";
+import { io } from "socket.io-client";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
@@ -12,10 +18,12 @@ function Navbar() {
   const [user, setUser] = useState(null);
   const [limits, setLimits] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
+  const dropdownRef = useRef(null);
+  const socketRef = useRef(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
   // โหลด limits ของ user
   const fetchLimits = async (id) => {
@@ -28,57 +36,114 @@ function Navbar() {
     }
   };
 
-  // โหลด user + limits ตอน mount
+  // โหลด Notification ใหม่จาก API
+  const loadNotifications = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/notifications");
+      const data = await res.json();
+      // เพิ่ม unread flag
+      const notifWithUnread = data.map((n) => ({ ...n, unread: true }));
+      setNotifications(notifWithUnread);
+      setUnreadCount(notifWithUnread.filter((n) => n.unread).length);
+    } catch (err) {
+      console.error("Error loading notifications:", err);
+    }
+  };
+
   useEffect(() => {
-    const loadUser = async () => {
-      const savedUser = localStorage.getItem("user");
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
+    // โหลด user info
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      setUser(parsed);
+      fetchLimits(parsed._id);
+      loadNotifications();
+
+      // Socket.IO
+      socketRef.current = io("http://localhost:5000");
+      socketRef.current.on("notification", (notif) => {
+        const newNotif = { ...notif, unread: true };
+        setNotifications((prev) => [newNotif, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      });
+    }
+
+    const handleLoginEvent = () => {
+      const saved = localStorage.getItem("user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
         setUser(parsed);
-        await fetchLimits(parsed._id);
-      } else {
-        setUser(null);
-        setLimits(null);
+        fetchLimits(parsed._id);
+        loadNotifications();
       }
     };
-    loadUser();
-    window.addEventListener("userLoggedIn", loadUser);
-    return () => window.removeEventListener("userLoggedIn", loadUser);
+
+    window.addEventListener("userLoggedIn", handleLoginEvent);
+
+    return () => {
+      window.removeEventListener("userLoggedIn", handleLoginEvent);
+      if (socketRef.current) socketRef.current.disconnect();
+    };
   }, []);
 
   const handleVolumeChange = (value) => {
     const newVolume = parseFloat(value);
     setVolume(newVolume);
-    document
-      .querySelectorAll("audio, video")
-      .forEach((el) => (el.volume = newVolume));
+    document.querySelectorAll("audio, video").forEach((el) => {
+      el.volume = newVolume;
+    });
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    alert("🚪 ออกจากระบบเรียบร้อย");
+
+    Swal.fire({
+      icon: "success",
+      title: "ออกจากระบบเรียบร้อย",
+      text: "🚪 คุณได้ออกจากระบบแล้ว",
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: "top-end",
+    });
+
     setUser(null);
     setLimits(null);
     navigate("/");
     window.dispatchEvent(new Event("userLoggedOut"));
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
+    if (!showDropdown) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+      setUnreadCount(0);
+    }
+  };
 
-  const notifications = [
-    { id: 1, text: "🎧 New track: Lo-fi Chill Mix" },
-    { id: 2, text: "🔥 Your favorite sample hit 1k downloads!" },
-    { id: 3, text: "💬 Someone commented on your post" },
-  ];
+  const renderNotificationMessage = (n) => {
+    let icon = null;
+    let text = n.message || "";
+
+    if (n.type === "upload" && n.user && n.song) {
+      icon = <FaArrowUp style={{ color: "#4edfff" }} />;
+      text = `${n.user.username} uploaded "${n.song.title}"`;
+    } else if (n.type === "download" && n.user && n.song) {
+      icon = <FaArrowDown style={{ color: "#ff8c42" }} />;
+      text = `${n.user.username} downloaded "${n.song.title}"`;
+    }
+
+    const time = dayjs(n.createdAt).fromNow();
+
+    return (
+      <div className="notification-content">
+        {icon}
+        <span>{text}</span>
+        <small className="notification-time">{time}</small>
+      </div>
+    );
+  };
 
   return (
     <header className="header">
@@ -87,7 +152,9 @@ function Navbar() {
           <img src={logo} alt="Sound Share Logo" className="logo" />
         </Link>
       </div>
+
       <div className="header-right">
+        {/* ปุ่มปรับเสียง */}
         <div className="volume-container">
           <button
             className="icon-button"
@@ -108,18 +175,57 @@ function Navbar() {
             />
           )}
         </div>
-        <Link to="/upload" className="nav-link">
-          Upload
-        </Link>
-        <Link to="/premium" className="nav-link">
-          Premium
-        </Link>
-        {limits && (
+
+        {/* ข้อมูล Upload/Download */}
+        {limits && user && (
           <div className="usage-info">
             Uploads: {limits.uploadCount}/{limits.maxUpload} | Downloads:{" "}
             {limits.downloadCount}/{limits.maxDownload}
           </div>
         )}
+
+        {user && (
+          <Link to="/upload" className="nav-link">
+            Upload
+          </Link>
+        )}
+
+        <Link to="/premium" className="nav-link">
+          Premium
+        </Link>
+
+        {/* กระดิ่ง Notification */}
+        {user && (
+          <div className="notification-wrapper" ref={dropdownRef}>
+            <button
+              className="icon-button"
+              onClick={toggleDropdown}
+              title="ดูการแจ้งเตือน"
+            >
+              <FaBell size={18} />
+              {unreadCount > 0 && <span className="notification-dot"></span>}
+            </button>
+
+            {showDropdown && (
+              <div className="notification-dropdown">
+                {notifications.length > 0 ? (
+                  notifications.map((n) => (
+                    <div
+                      key={n._id || Math.random()}
+                      className={`notification-item ${n.unread ? "unread" : ""}`}
+                    >
+                      {renderNotificationMessage(n)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="notification-empty">No notifications</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* โปรไฟล์ */}
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
@@ -143,29 +249,6 @@ function Navbar() {
             </Link>
           </>
         )}
-
-        <div className="notification-wrapper" ref={dropdownRef}>
-          <button
-            className="icon-button"
-            onClick={() => setShowDropdown(!showDropdown)}
-            title="ดูการแจ้งเตือน"
-          >
-            <FaBell size={18} />
-          </button>
-          {showDropdown && (
-            <div className="notification-dropdown">
-              {notifications.length > 0 ? (
-                notifications.map((n) => (
-                  <div key={n.id} className="notification-item">
-                    {n.text}
-                  </div>
-                ))
-              ) : (
-                <div className="notification-empty">No notifications</div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );

@@ -1,130 +1,121 @@
-
-/* กล่องหลัก */
-.i-container {
+/* ครอบกลางทั้งหน้า */
+.i-page-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 80vh;
+  height: 800px;
+  background-color: #2f3645;
 }
 
 /* กล่องฟอร์ม */
-.i-form {
+.i-container {
+  width: 340px;
   background-color: #4D556C;
-  padding: 40px;
+  padding: 24px;
   border-radius: 10px;
-  width: 305px;
-  height: 457px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-  color: #fff;
-  border: 1px solid #ffffff;
+  color: #ffffff;
+  box-shadow: 0px 0px 10px rgba(0,0,0,0.25);
 }
 
 /* หัวข้อ */
 .i-header {
   text-align: center;
-  margin-top: 80px;
-  font-size: 1.4rem;
+  margin-bottom: 20px;
+  font-size: 20px;
   font-weight: 600;
-  margin-bottom: 25px;
 }
 
-/* label */
-label {
-  font-size: 12px;
-  margin-bottom: 100px;
-  display: block;
-  color: #d1d5db;
-}
-
-/* input */
-input[type="text"],
-input[type="password"] {
-  width: 290px;
-  padding: 10px 12px;
-  margin-bottom: 15px;
-  margin-top: -10px;
-  border-radius: 6px;
+/* input ทั้งหมด */
+.i-form input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 5px;
   border: 1px solid #ffffff;
   background-color: #4D556C;
   color: #fff;
+  font-size: 14px;
+  box-sizing: border-box;
   outline: none;
   transition: border-color 0.3s ease;
-  font-size: 12px;
 }
 
-input[type="text"]:focus,
-input[type="password"]:focus {
+.i-form input:focus {
   border-color: #6C63FF;
- 
-
-  
 }
 
-/* ปุ่มสร้างบัญชี */
-.i-create button {
-  width: 250px;
-  margin-left: 10%;
-  margin-top: 20px;
-  background-color: #3B82F6;
+/* password + toggle */
+.password-container {
+  position: relative;
+}
+
+.password-container input {
+  padding-right: 60px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
   border: none;
-  color: white;
-  padding: 10px 0;
-  border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
-  font-size: 12px;
-
+  font-size: 0.8rem;
+  color: #ffffff;
 }
 
-.i-create button:hover {
-  background-color: #2563EB;
+.toggle-password:hover {
+  font-weight: bold;
+}
+
+/* ปุ่ม Create account + Google */
+.create-btn,
+.google-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* สีปุ่ม Create account */
+.create-btn {
+  background-color: #1E90FF;
+  color: #fff;
+}
+
+.create-btn:hover {
+  background-color: #0a6fd6;
 }
 
 /* ปุ่ม Google */
-.i-google {
-  margin-top: 15px;
-}
-
-.i-google button {
-  width: 250px;
-  margin-left: 10%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.google-btn {
   background-color: #ffffff;
-  color: #374151;
-  border: none;
-  border-radius: 6px;
-  padding: 10px 0;
-  font-weight: 500;
-  
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+  color: #000;
 }
 
-.i-google button:hover {
-  background-color: #f3f4f6;
+.google-btn img {
+  margin-right: 8px;
 }
-
-
 
 /* ลิงก์ Log in */
 .i-login-text {
-  margin-top: 20px;
+  margin-top: 12px;
   text-align: center;
   font-size: 12px;
-  color: #9CA3AF;
-  
 }
 
-.i-Login {
-  color: #efefef;
+.i-login-text a {
+  color: #86c5ff;
   text-decoration: none;
-  font-weight: 500;
 }
 
-.i-Login:hover {
+.i-login-text a:hover {
   text-decoration: underline;
 }

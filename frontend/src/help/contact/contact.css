@@ -1,0 +1,79 @@
+/* Container ของ Contact */
+.contact-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 250px 16px 80px 16px; /* เว้นบน-ล่างให้เห็น Navbar/Footer */
+  background-color: #2b2f3a;
+  min-height: 800px;
+  box-sizing: border-box;
+}
+
+/* Card */
+.contact-card {
+  width: 100%;
+  max-width: 900px;
+  background: linear-gradient(180deg, #2b2f3a 0%, #232428 100%);
+  color: #ffffff;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(11, 14, 20, 0.35);
+  box-sizing: border-box;
+  margin-bottom: 40px; /* เว้น Footer */
+}
+
+/* Header */
+.contact-header {
+  font-size: 1.6rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Text */
+.contact-text {
+  line-height: 1.6;
+  font-size: 1rem;
+  opacity: 0.95;
+}
+
+/* Social Icons */
+.social-icons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.social-icons svg {
+  color: #fff; /* สีไอคอนขาว */
+  font-size: 28px;
+  transition: color 0.3s;
+}
+
+.social-icons svg:hover {
+  color: #ff4d4d; /* สี hover */
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .contact-container {
+    padding: 100px 12px 60px 12px;
+  }
+
+  .contact-card {
+    padding: 18px;
+    margin-bottom: 30px;
+  }
+
+  .contact-header {
+    font-size: 1.25rem;
+  }
+
+  .contact-text {
+    font-size: 0.95rem;
+  }
+
+  .social-icons svg {
+    font-size: 24px;
+  }
+}

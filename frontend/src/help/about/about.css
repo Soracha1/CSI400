@@ -1,0 +1,58 @@
+/* Container ของ About */
+.about-container {
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 200px 0px 0px 0px; /* เว้นบน-ล่างให้เห็น Navbar/Footer */
+  background-color: #2b2f3a;
+  min-height: 800px;
+  box-sizing: border-box;
+}
+
+/* Card */
+.about-card {
+  width: 100%;
+  max-width: 900px;
+  background: linear-gradient(180deg, #2b2f3a 0%, #232428 100%);
+  color: #ffffff;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(11, 14, 20, 0.35);
+  box-sizing: border-box;
+  margin-bottom: 40px; /* เว้น Footer */
+}
+
+/* Header */
+.about-header {
+  font-size: 1.6rem;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+/* Text */
+.about-text {
+  line-height: 1.6;
+  font-size: 1rem;
+  opacity: 0.95;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .about-container {
+    padding: 100px 12px 60px 12px;
+  }
+
+  .about-card {
+    padding: 18px;
+    margin-bottom: 30px;
+  }
+
+  .about-header {
+    font-size: 1.25rem;
+  }
+
+  .about-text {
+    font-size: 0.95rem;
+  }
+}
