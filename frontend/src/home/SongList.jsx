@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2"; // แจ้งเตือน
+import Swal from "sweetalert2";
 import "./SongList.css";
 
 function SongList({ searchTerm }) {
@@ -19,9 +19,11 @@ function SongList({ searchTerm }) {
   const songsPerPage = 5;
 
   const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
     loadAllData();
+    loadFavorites();
   }, []);
 
   useEffect(() => {
@@ -47,32 +49,26 @@ function SongList({ searchTerm }) {
     }
   };
 
-  const handleLike = async (id) => {
+  const loadFavorites = async () => {
+    if (!user._id || !token) return;
     try {
-      setFavorites((prev) =>
-        prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
-      );
-
-      await axios.post(
-        `http://localhost:5000/api/songs/${id}/like`,
-        {},
+      const res = await axios.get(
+        `http://localhost:5000/api/user/${user._id}/favorites`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      loadAllData();
+      setFavorites(res.data.map(song => song._id));
     } catch (err) {
-      console.error("Like error:", err);
+      console.error("Error loading favorites:", err);
     }
   };
 
-  const handleDownload = async (song) => {
+  const handleLike = async (id) => {
     try {
-      // ตรวจสอบว่า login หรือยัง
       if (!token) {
         Swal.fire({
           icon: "error",
-          title: "คุณยังไม่ได้เข้าสู่ระบบ",
-          text: "กรุณาเข้าสู่ระบบก่อนดาวน์โหลดเพลง",
+          title: "กรุณาเข้าสู่ระบบ",
+          text: "คุณต้องเข้าสู่ระบบก่อนกดถูกใจ",
           timer: 2000,
           showConfirmButton: false,
           toast: true,
@@ -81,16 +77,44 @@ function SongList({ searchTerm }) {
         return;
       }
 
-      // ตรวจสอบโควต้าจาก backend
-      const quotaRes = await axios.get(
-        `http://localhost:5000/api/users/download-quota`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!quotaRes.data.allowed) {
+      const isFav = favorites.includes(id);
+
+      if (isFav) {
+        // Remove from favorites
+        await axios.delete(
+          `http://localhost:5000/api/songs/${id}/favorite`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setFavorites(prev => prev.filter(f => f !== id));
+      } else {
+        // Add to favorites
+        await axios.post(
+          `http://localhost:5000/api/songs/${id}/favorite`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setFavorites(prev => [...prev, id]);
+      }
+
+      // Trigger event for Profilefavorites to refresh
+      window.dispatchEvent(new Event("favoriteChanged"));
+      
+      loadAllData();
+    } catch (err) {
+      console.error("Like error:", err);
+      if (err.response?.status === 400 && err.response?.data?.message === "Already in favorites") {
+        setFavorites(prev => [...prev, id]);
+      }
+    }
+  };
+
+  const handleDownload = async (song) => {
+    try {
+      if (!token) {
         Swal.fire({
           icon: "error",
-          title: "หมดโควต้าดาวน์โหลดแล้ว",
-          text: "คุณไม่สามารถดาวน์โหลดเพลงได้อีกในตอนนี้",
+          title: "คุณยังไม่ได้เข้าสู่ระบบ",
+          text: "กรุณาเข้าสู่ระบบก่อนดาวน์โหลดเพลง",
           timer: 2000,
           showConfirmButton: false,
           toast: true,
@@ -120,7 +144,6 @@ function SongList({ searchTerm }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // แจ้งเตือนดาวน์โหลดสำเร็จ
       Swal.fire({
         icon: "success",
         title: "ดาวน์โหลดเพลงสำเร็จ 🎵",
@@ -137,7 +160,7 @@ function SongList({ searchTerm }) {
       Swal.fire({
         icon: "error",
         title: "เกิดข้อผิดพลาด",
-        text: `ไม่สามารถดาวน์โหลดเพลง "${song.title}" ได้`,
+        text: err.response?.data?.message || `ไม่สามารถดาวน์โหลดเพลง "${song.title}" ได้`,
         timer: 2000,
         showConfirmButton: false,
         toast: true,
@@ -293,7 +316,6 @@ function SongList({ searchTerm }) {
         </button>
       </div>
 
-      {/* Progress Bar */}
       <div className="song-progress">
         <div
           className="progress-fill"

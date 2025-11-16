@@ -18,6 +18,22 @@ dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
+// ================= Socket.IO Setup (ต้องทำก่อน routes!) =================
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("✅ Socket connected:", socket.id);
+  socket.on("disconnect", () =>
+    console.log("❌ Socket disconnected:", socket.id)
+  );
+});
+
 // ================= Middleware =================
 app.use(
   cors({
@@ -34,7 +50,7 @@ mongoose
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
-// ================= Notification Model =================
+// ================= Models =================
 const notificationSchema = new mongoose.Schema({
   type: { type: String, enum: ["upload", "download"], required: true },
   message: { type: String, required: true },
@@ -44,7 +60,6 @@ const notificationSchema = new mongoose.Schema({
 });
 const Notification = mongoose.model("Notification", notificationSchema);
 
-// ================= Models =================
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
@@ -57,6 +72,7 @@ const userSchema = new mongoose.Schema({
   maxDownload: { type: Number, default: 5 },
   role: { type: String, enum: ["user", "admin"], default: "user" },
   lastActivity: { type: Date, default: Date.now },
+  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
 });
 const User = mongoose.model("User", userSchema);
 
@@ -76,11 +92,7 @@ const songSchema = new mongoose.Schema({
   downloads: { type: Number, default: 0 },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   createdAt: { type: Date, default: Date.now },
-  
 });
-
-
-
 const Song = mongoose.model("Song", songSchema);
 
 // ================= JWT Middleware =================
@@ -104,7 +116,6 @@ const isAdmin = async (req, res, next) => {
 };
 
 // ================= Auth Routes =================
-// Register
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -119,7 +130,6 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -135,6 +145,21 @@ app.post("/api/login", async (req, res) => {
       { expiresIn: "7d" }
     );
     res.json({ message: "Login success", token, user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/auth/user", async (req, res) => {
+  try {
+    const token = req.headers["authorization"]?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "No token" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -200,40 +225,7 @@ app.get(
   }
 );
 
-// ================= Notification API =================
-app.get("/api/notifications", async (req, res) => {
-  try {
-    const notifications = await Notification.find()
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .populate("user", "username picture")
-      .populate("song", "title artist");
-    res.json(notifications);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-app.post("/api/notifications", async (req, res) => {
-  try {
-    const { type, message, userId, songId } = req.body;
-    const notif = await Notification.create({
-      type,
-      message,
-      user: userId,
-      song: songId,
-    });
-
-    // ส่ง realtime ไปทุก client
-    io.emit("notification", notif);
-
-    res.json(notif);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// ================= Song System =================
+// ================= Song Upload =================
 const uploadsDir = path.join(__dirname, "uploads/music");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -251,14 +243,7 @@ app.post(
     try {
       const user = await User.findById(req.userId);
       if (!user) return res.status(404).json({ message: "User not found" });
-      app.get("/api/user/:id/uploads", verifyToken, async (req, res) => {
-  try {
-    const songs = await Song.find({ user: req.params.id }).sort({ createdAt: -1 });
-    res.json(songs);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+
       if (user.role === "user" && user.uploadCount >= user.maxUpload)
         return res.status(403).json({ message: "Upload limit reached" });
 
@@ -279,14 +264,11 @@ app.post(
         tags,
         soundType: req.body.soundType || "",
         filePath: `uploads/music/${req.file.filename}`,
-        user: req.userId, // บันทึก user ID ด้วย
+        user: req.userId,
       });
-
-      
 
       user.uploadCount += 1;
       await user.save();
-
 
       // ส่ง notification realtime
       io.emit("notification", {
@@ -304,157 +286,47 @@ app.post(
   }
 );
 
-// ================= Songs GET =================
+// ================= Songs Routes =================
 app.get("/api/songs", async (req, res) => {
-  const songs = await Song.find().sort({ createdAt: -1 });
-  res.json(songs);
-});
-
-app.get("/api/songs/top-likes", async (req, res) => {
-  const songs = await Song.find().sort({ likes: -1 }).limit(5);
-  res.json(songs);
-});
-
-app.get("/api/songs/top-downloads", async (req, res) => {
-  const songs = await Song.find().sort({ downloads: -1 }).limit(5);
-  res.json(songs);
-});
-
-
-// ⭐⭐⭐ วาง API นี้ตรงนี้ ⭐⭐⭐
-// =============== User Uploads (อ่านเพลงที่ user อัปโหลด) =================
-app.get("/api/user/:id/uploads", async (req, res) => {
   try {
-    const songs = await Song.find({ user: req.params.id }).sort({ createdAt: -1 });
+    const songs = await Song.find().sort({ createdAt: -1 });
     res.json(songs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// ⭐⭐⭐ วาง API นี้ตรงนี้ ⭐⭐⭐
-
-
-// ================= Like & Download =================
-app.post("/api/songs/:id/like", verifyToken, async (req, res) => {
-  const song = await Song.findByIdAndUpdate(
-    req.params.id,
-    { $inc: { likes: 1 } },
-    { new: true }
-  );
-  res.json(song);
-});
-
-app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
+app.get("/api/songs/top-likes", async (req, res) => {
   try {
-    const user = await User.findById(req.userId);
-    if (user.role === "user" && user.downloadCount >= user.maxDownload)
-      return res.status(403).json({ message: "Download limit reached" });
-
-    const song = await Song.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { downloads: 1 } },
-      { new: true }
-    );
-
-    user.downloadCount += 1;
-    await user.save();
-
-
-
-    // ส่ง notification realtime
-    io.emit("notification", {
-      type: "download",
-      message: `${user.username} downloaded ${song.title}`,
-      user: user._id,
-      song: song._id,
-      createdAt: new Date(),
-    });
-
-    res.json(song);
+    const songs = await Song.find().sort({ likes: -1 }).limit(5);
+    res.json(songs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-});
-
-// ================= Songs GET =================
-app.get("/api/songs", async (req, res) => {
-  const songs = await Song.find().sort({ createdAt: -1 });
-  res.json(songs);
-});
-
-app.get("/api/songs/top-likes", async (req, res) => {
-  const songs = await Song.find().sort({ likes: -1 }).limit(5);
-  res.json(songs);
 });
 
 app.get("/api/songs/top-downloads", async (req, res) => {
-  const songs = await Song.find().sort({ downloads: -1 }).limit(5);
-  res.json(songs);
-});
-
-// ================= Admin Routes =================
-app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
-  const users = await User.find().select("-password");
-  res.json(users);
-});
-
-app.put("/api/admin/users/:id/role", verifyToken, isAdmin, async (req, res) => {
-  const { role } = req.body;
-  if (!["user", "admin"].includes(role))
-    return res.status(400).json({ message: "Invalid role" });
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    { role },
-    { new: true }
-  ).select("-password");
-  res.json({ message: "Role updated", user });
-});
-
-// ================= User Limits =================
-app.get("/api/user/:id/limits", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select(
-      "uploadCount downloadCount maxUpload maxDownload"
-    );
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+    const songs = await Song.find().sort({ downloads: -1 }).limit(5);
+    res.json(songs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// ================= Current User Info =================
-app.get("/auth/user", async (req, res) => {
+app.get("/api/songs/:id", async (req, res) => {
   try {
-    const token = req.headers["authorization"]?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "No token" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
-    const user = await User.findById(decoded.id).select("-password");
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// ================= Tags =================
-app.get("/api/tags", async (req, res) => {
-  try {
-    const tags = await Song.find().distinct("tags");
-    res.json(tags.filter((t) => t && t.trim() !== ""));
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ message: "Song not found" });
+    res.json(song);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ================= Search =================
 app.get("/api/songs/search", async (req, res) => {
   try {
     const { q, tag } = req.query;
-
     let query = {};
 
     if (q) {
@@ -479,18 +351,206 @@ app.get("/api/songs/search", async (req, res) => {
   }
 });
 
-// Get song by ID
-app.get("/api/songs/:id", async (req, res) => {
+// ================= Favorites System =================
+app.post("/api/songs/:id/favorite", verifyToken, async (req, res) => {
   try {
-    const song = await Song.findById(req.params.id);
-    if (!song) return res.status(404).json({ message: "Song not found" });
+    const user = await User.findById(req.userId);
+    const songId = req.params.id;
+
+    if (user.favorites?.includes(songId)) {
+      return res.status(400).json({ message: "Already in favorites" });
+    }
+
+    await User.findByIdAndUpdate(req.userId, {
+      $push: { favorites: songId }
+    });
+
+    await Song.findByIdAndUpdate(songId, {
+      $inc: { likes: 1 }
+    });
+
+    res.json({ message: "Added to favorites" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.delete("/api/songs/:id/favorite", verifyToken, async (req, res) => {
+  try {
+    const songId = req.params.id;
+
+    await User.findByIdAndUpdate(req.userId, {
+      $pull: { favorites: songId }
+    });
+
+    await Song.findByIdAndUpdate(songId, {
+      $inc: { likes: -1 }
+    });
+
+    res.json({ message: "Removed from favorites" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/user/:id/favorites", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate({
+        path: "favorites",
+        populate: { path: "user", select: "username picture" }
+      });
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.json(user.favorites || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Download System =================
+app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (user.role === "user" && user.downloadCount >= user.maxDownload)
+      return res.status(403).json({ message: "Download limit reached" });
+
+    const song = await Song.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { downloads: 1 } },
+      { new: true }
+    );
+
+    user.downloadCount += 1;
+    await user.save();
+
+    // ส่ง notification realtime
+    io.emit("notification", {
+      type: "download",
+      message: `${user.username} downloaded ${song.title}`,
+      user: user._id,
+      song: song._id,
+      createdAt: new Date(),
+    });
+
     res.json(song);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/user/:id/downloads", verifyToken, async (req, res) => {
+  try {
+    if (req.userId !== req.params.id) {
+      return res.status(403).json({ message: "Forbidden: You can only view your own downloads." });
+    }
+
+    const downloads = await Notification.find({
+      user: req.params.id,
+      type: "download",
+    })
+      .sort({ createdAt: -1 })
+      .populate("song");
+
+    res.json(downloads);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= User Routes =================
+app.get("/api/user/:id/uploads", async (req, res) => {
+  try {
+    const songs = await Song.find({ user: req.params.id }).sort({ createdAt: -1 });
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/user/:id/limits", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select(
+      "uploadCount downloadCount maxUpload maxDownload"
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Notifications =================
+app.get("/api/notifications", async (req, res) => {
+  try {
+    const notifications = await Notification.find()
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .populate("user", "username picture")
+      .populate("song", "title artist");
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post("/api/notifications", async (req, res) => {
+  try {
+    const { type, message, userId, songId } = req.body;
+    const notif = await Notification.create({
+      type,
+      message,
+      user: userId,
+      song: songId,
+    });
+
+    io.emit("notification", notif);
+    res.json(notif);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Tags =================
+app.get("/api/tags", async (req, res) => {
+  try {
+    const tags = await Song.find().distinct("tags");
+    res.json(tags.filter((t) => t && t.trim() !== ""));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ================= Serve uploads with CORS =================
+// ================= Admin Routes =================
+app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.put("/api/admin/users/:id/role", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!["user", "admin"].includes(role))
+      return res.status(400).json({ message: "Invalid role" });
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    ).select("-password");
+    res.json({ message: "Role updated", user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Static Files =================
 app.use(
   "/uploads",
   (req, res, next) => {
@@ -499,50 +559,6 @@ app.use(
   },
   express.static(path.join(__dirname, "uploads"))
 );
-
-// ================= Socket.IO =================
-// สร้าง HTTP server
-const server = http.createServer(app);
-
-// สร้าง Socket.IO server
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173"],
-    credentials: true,
-  },
-});
-
-io.on("connection", (socket) => {
-  console.log("✅ Socket connected:", socket.id);
-  socket.on("disconnect", () =>
-    console.log("❌ Socket disconnected:", socket.id)
-  );
-});
-
-
-// ================= Get User Downloads =================
-app.get("/api/user/:id/downloads", verifyToken, async (req, res) => {
-  try {
-    // 1. ตรวจสอบว่า ID ผู้ใช้ที่ login (จาก token) ตรงกับ ID ที่ขอข้อมูลหรือไม่
-    // เพื่อป้องกันไม่ให้คนอื่นมาดูประวัติ download ของเรา
-    if (req.userId !== req.params.id) {
-      return res.status(403).json({ message: "Forbidden: You can only view your own downloads." });
-    }
-
-    // 2. ค้นหา "Notification" ที่มี type เป็น "download" และ user ID ตรงกับที่ระบุ
-    const downloads = await Notification.find({
-      user: req.params.id,
-      type: "download",
-    })
-      .sort({ createdAt: -1 }) // 3. เรียงจากใหม่ไปเก่า
-      .populate("song");      // 4. ดึงข้อมูล "song" ที่เกี่ยวข้องมาด้วย (สำคัญมากสำหรับ React component)
-
-    res.json(downloads);
-    
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
 
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
