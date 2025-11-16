@@ -20,6 +20,7 @@ function Profile() {
       const storedUser = localStorage.getItem("user");
       const userData = storedUser ? JSON.parse(storedUser) : null;
       const userId = userData?._id;
+      const token = localStorage.getItem("token");
 
       if (!userId) return;
 
@@ -30,9 +31,8 @@ function Profile() {
       const uploadsData = await uploadsRes.json();
       setUploadCount(uploadsData.length);
 
-      // Fetch downloads count (ถ้ามี API)
+      // Fetch downloads count
       try {
-        const token = localStorage.getItem("token");
         const downloadsRes = await fetch(`http://localhost:5000/api/user/${userId}/downloads`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -42,8 +42,16 @@ function Profile() {
         console.log("Downloads API not available");
       }
 
-      // Fetch favorites count (ถ้ามี API - ถ้าไม่มีให้เป็น 0)
-      // setFavoriteCount(0); // ถ้ายังไม่มี API
+      // ✅ Fetch favorites count
+      try {
+        const favoritesRes = await fetch(`http://localhost:5000/api/user/${userId}/favorites`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const favoritesData = await favoritesRes.json();
+        setFavoriteCount(favoritesData.length);
+      } catch (err) {
+        console.log("Favorites API not available");
+      }
 
     } catch (err) {
       console.error("Error fetching counts:", err);
@@ -59,10 +67,18 @@ function Profile() {
       fetchUserData();
     };
 
+    // ✅ Listen for favorite changed event
+    const handleFavoriteChanged = () => {
+      console.log("Favorite changed, refreshing counts...");
+      fetchUserData();
+    };
+
     window.addEventListener("uploadSuccess", handleUploadSuccess);
+    window.addEventListener("favoriteChanged", handleFavoriteChanged);
 
     return () => {
       window.removeEventListener("uploadSuccess", handleUploadSuccess);
+      window.removeEventListener("favoriteChanged", handleFavoriteChanged);
     };
   }, []);
 
