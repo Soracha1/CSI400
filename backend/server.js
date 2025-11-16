@@ -390,12 +390,9 @@ app.get("/auth/user", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // =========================
 // TAGS ดึงแท็กทั้งหมด
-=======
 // ================= Tags =================
->>>>>>> a1c533d2fd01b6b0e9ff0d4b6765abe9a2d2dad2
 app.get("/api/tags", async (req, res) => {
   try {
     const tags = await Song.find().distinct("tags");
@@ -455,11 +452,7 @@ app.use(
   express.static(path.join(__dirname, "uploads"))
 );
 
-<<<<<<< HEAD
-// ================= Start Server =================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-=======
+
 // ================= Socket.IO =================
 // สร้าง HTTP server
 const server = http.createServer(app);
@@ -482,4 +475,3 @@ io.on("connection", (socket) => {
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
->>>>>>> a1c533d2fd01b6b0e9ff0d4b6765abe9a2d2dad2
