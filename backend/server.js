@@ -74,8 +74,13 @@ const songSchema = new mongoose.Schema({
   filePath: String,
   likes: { type: Number, default: 0 },
   downloads: { type: Number, default: 0 },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   createdAt: { type: Date, default: Date.now },
+  
 });
+
+
+
 const Song = mongoose.model("Song", songSchema);
 
 // ================= JWT Middleware =================
@@ -246,6 +251,14 @@ app.post(
     try {
       const user = await User.findById(req.userId);
       if (!user) return res.status(404).json({ message: "User not found" });
+      app.get("/api/user/:id/uploads", verifyToken, async (req, res) => {
+  try {
+    const songs = await Song.find({ user: req.params.id }).sort({ createdAt: -1 });
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
       if (user.role === "user" && user.uploadCount >= user.maxUpload)
         return res.status(403).json({ message: "Upload limit reached" });
 
@@ -266,10 +279,14 @@ app.post(
         tags,
         soundType: req.body.soundType || "",
         filePath: `uploads/music/${req.file.filename}`,
+        user: req.userId, // บันทึก user ID ด้วย
       });
+
+      
 
       user.uploadCount += 1;
       await user.save();
+
 
       // ส่ง notification realtime
       io.emit("notification", {
@@ -286,6 +303,37 @@ app.post(
     }
   }
 );
+
+// ================= Songs GET =================
+app.get("/api/songs", async (req, res) => {
+  const songs = await Song.find().sort({ createdAt: -1 });
+  res.json(songs);
+});
+
+app.get("/api/songs/top-likes", async (req, res) => {
+  const songs = await Song.find().sort({ likes: -1 }).limit(5);
+  res.json(songs);
+});
+
+app.get("/api/songs/top-downloads", async (req, res) => {
+  const songs = await Song.find().sort({ downloads: -1 }).limit(5);
+  res.json(songs);
+});
+
+
+// ⭐⭐⭐ วาง API นี้ตรงนี้ ⭐⭐⭐
+// =============== User Uploads (อ่านเพลงที่ user อัปโหลด) =================
+app.get("/api/user/:id/uploads", async (req, res) => {
+  try {
+    const songs = await Song.find({ user: req.params.id }).sort({ createdAt: -1 });
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ⭐⭐⭐ วาง API นี้ตรงนี้ ⭐⭐⭐
+
 
 // ================= Like & Download =================
 app.post("/api/songs/:id/like", verifyToken, async (req, res) => {
@@ -311,6 +359,8 @@ app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
 
     user.downloadCount += 1;
     await user.save();
+
+
 
     // ส่ง notification realtime
     io.emit("notification", {
@@ -467,6 +517,31 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () =>
     console.log("❌ Socket disconnected:", socket.id)
   );
+});
+
+
+// ================= Get User Downloads =================
+app.get("/api/user/:id/downloads", verifyToken, async (req, res) => {
+  try {
+    // 1. ตรวจสอบว่า ID ผู้ใช้ที่ login (จาก token) ตรงกับ ID ที่ขอข้อมูลหรือไม่
+    // เพื่อป้องกันไม่ให้คนอื่นมาดูประวัติ download ของเรา
+    if (req.userId !== req.params.id) {
+      return res.status(403).json({ message: "Forbidden: You can only view your own downloads." });
+    }
+
+    // 2. ค้นหา "Notification" ที่มี type เป็น "download" และ user ID ตรงกับที่ระบุ
+    const downloads = await Notification.find({
+      user: req.params.id,
+      type: "download",
+    })
+      .sort({ createdAt: -1 }) // 3. เรียงจากใหม่ไปเก่า
+      .populate("song");      // 4. ดึงข้อมูล "song" ที่เกี่ยวข้องมาด้วย (สำคัญมากสำหรับ React component)
+
+    res.json(downloads);
+    
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // ================= Start Server =================

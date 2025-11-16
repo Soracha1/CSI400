@@ -23,19 +23,29 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/auth/user", { credentials: "include" })
-      .then((res) => {
-        if (!res.ok) throw new Error("Not logged in");
-        return res.json();
-      })
-      .then((data) => {
-        if (data && data._id) {
-          localStorage.setItem("user", JSON.stringify(data));
-          console.log("✅ Logged in via Google:", data);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const token = localStorage.getItem("token");
+
+  if (!token) return;
+
+  fetch("http://localhost:5000/auth/user", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Not logged in");
+      return res.json();
+    })
+    .then((data) => {
+      if (data && data._id) {
+        localStorage.setItem("user", JSON.stringify(data));
+        console.log("✅ Logged in via token:", data);
+      }
+    })
+    .catch((err) => console.error("❌ Auth failed:", err));
+}, []);
 
   return (
     <Router>

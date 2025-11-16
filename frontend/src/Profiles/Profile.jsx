@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Profile.css";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { SiTiktok } from "react-icons/si";
@@ -7,9 +7,64 @@ import ProfileUpload from "./ProfileUpload/Profileuploads";
 import ProfileDownload from "./ProfileDownload/Profiledownload";
 import ProfileFavorites from "./ProfileFovorites/Profilefovorites";
 
-
 function Profile() {
   const [activeTab, setActiveTab] = useState("uploads");
+  const [user, setUser] = useState(null);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [downloadCount, setDownloadCount] = useState(0);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+
+  // ✅ Fetch user data และ counts
+  const fetchUserData = async () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      const userData = storedUser ? JSON.parse(storedUser) : null;
+      const userId = userData?._id;
+
+      if (!userId) return;
+
+      setUser(userData);
+
+      // Fetch uploads count
+      const uploadsRes = await fetch(`http://localhost:5000/api/user/${userId}/uploads`);
+      const uploadsData = await uploadsRes.json();
+      setUploadCount(uploadsData.length);
+
+      // Fetch downloads count (ถ้ามี API)
+      try {
+        const token = localStorage.getItem("token");
+        const downloadsRes = await fetch(`http://localhost:5000/api/user/${userId}/downloads`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const downloadsData = await downloadsRes.json();
+        setDownloadCount(downloadsData.length);
+      } catch (err) {
+        console.log("Downloads API not available");
+      }
+
+      // Fetch favorites count (ถ้ามี API - ถ้าไม่มีให้เป็น 0)
+      // setFavoriteCount(0); // ถ้ายังไม่มี API
+
+    } catch (err) {
+      console.error("Error fetching counts:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+
+    // ✅ Listen for upload success event
+    const handleUploadSuccess = () => {
+      console.log("Upload detected, refreshing counts...");
+      fetchUserData();
+    };
+
+    window.addEventListener("uploadSuccess", handleUploadSuccess);
+
+    return () => {
+      window.removeEventListener("uploadSuccess", handleUploadSuccess);
+    };
+  }, []);
 
   // ✅ ฟังก์ชันเลือกหน้าให้แสดงตามแท็บ
   const renderTabContent = () => {
@@ -34,8 +89,8 @@ function Profile() {
             <img src="/src/assets/logo.png" alt="Profile" />
             <div className="edit-icon">✏️</div>
           </div>
-          <h2 className="profile-name">Name</h2>
-          <p className="profile-username">Bio Noname</p>
+          <h2 className="profile-name">{user?.username || "Name"}</h2>
+          <p className="profile-username">{user?.email || "Bio Noname"}</p>
 
           <div className="profile-social">
             <a href="#"><FaFacebook /></a>
@@ -51,19 +106,19 @@ function Profile() {
           className={`tab ${activeTab === "uploads" ? "active" : ""}`}
           onClick={() => setActiveTab("uploads")}
         >
-          5 UPLOADS
+          UPLOADS {uploadCount > 0 && `(${uploadCount})`}
         </div>
         <div
           className={`tab ${activeTab === "downloads" ? "active" : ""}`}
           onClick={() => setActiveTab("downloads")}
         >
-          5 DOWNLOADS
+          DOWNLOADS {downloadCount > 0 && `(${downloadCount})`}
         </div>
         <div
           className={`tab ${activeTab === "favorites" ? "active" : ""}`}
           onClick={() => setActiveTab("favorites")}
         >
-          2999 FAVORITES
+          FAVORITES {favoriteCount > 0 && `(${favoriteCount})`}
         </div>
       </div>
 
