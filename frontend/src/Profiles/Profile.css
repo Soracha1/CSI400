@@ -10,7 +10,7 @@
 /* ส่วนหัวที่มี Gradient */
 .profile-header {
   background: linear-gradient(to bottom, #66b3ff, #3399ff);
-  height: 300px;
+  height: 350px;
   width: 100%;
   display: flex;
   align-items: flex-end;

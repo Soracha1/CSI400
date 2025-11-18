@@ -25,7 +25,6 @@ function Navbar() {
   const socketRef = useRef(null);
   const navigate = useNavigate();
 
-  // โหลด limits ของ user
   const fetchLimits = async (id) => {
     try {
       const res = await fetch(`http://localhost:5000/api/user/${id}/limits`);
@@ -36,12 +35,10 @@ function Navbar() {
     }
   };
 
-  // โหลด Notification ใหม่จาก API
   const loadNotifications = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/notifications");
       const data = await res.json();
-      // เพิ่ม unread flag
       const notifWithUnread = data.map((n) => ({ ...n, unread: true }));
       setNotifications(notifWithUnread);
       setUnreadCount(notifWithUnread.filter((n) => n.unread).length);
@@ -51,7 +48,6 @@ function Navbar() {
   };
 
   useEffect(() => {
-    // โหลด user info
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
       const parsed = JSON.parse(savedUser);
@@ -59,7 +55,6 @@ function Navbar() {
       fetchLimits(parsed._id);
       loadNotifications();
 
-      // Socket.IO
       socketRef.current = io("http://localhost:5000");
       socketRef.current.on("notification", (notif) => {
         const newNotif = { ...notif, unread: true };
@@ -78,10 +73,19 @@ function Navbar() {
       }
     };
 
+    // ✅ ฟังการอัปเดตโปรไฟล์
+    const handleProfileUpdated = (event) => {
+      console.log("Navbar: Profile updated!", event.detail);
+      const updatedUser = event.detail;
+      setUser(updatedUser);
+    };
+
     window.addEventListener("userLoggedIn", handleLoginEvent);
+    window.addEventListener("profileUpdated", handleProfileUpdated);
 
     return () => {
       window.removeEventListener("userLoggedIn", handleLoginEvent);
+      window.removeEventListener("profileUpdated", handleProfileUpdated);
       if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
@@ -145,6 +149,9 @@ function Navbar() {
     );
   };
 
+  // ✅ ใช้ avatar หรือ picture (รองรับทั้งสอง)
+  const avatarUrl = user?.avatar || user?.picture || defaultAvatar;
+
   return (
     <header className="header">
       <div className="header-left">
@@ -154,7 +161,6 @@ function Navbar() {
       </div>
 
       <div className="header-right">
-        {/* ปุ่มปรับเสียง */}
         <div className="volume-container">
           <button
             className="icon-button"
@@ -176,7 +182,6 @@ function Navbar() {
           )}
         </div>
 
-        {/* ข้อมูล Upload/Download */}
         {limits && user && (
           <div className="usage-info">
             Uploads: {limits.uploadCount}/{limits.maxUpload} | Downloads:{" "}
@@ -194,7 +199,6 @@ function Navbar() {
           Premium
         </Link>
 
-        {/* กระดิ่ง Notification */}
         {user && (
           <div className="notification-wrapper" ref={dropdownRef}>
             <button
@@ -225,12 +229,11 @@ function Navbar() {
           </div>
         )}
 
-        {/* โปรไฟล์ */}
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
               <img
-                src={user.picture || defaultAvatar}
+                src={avatarUrl}
                 alt="Profile"
                 className="avatar"
               />
