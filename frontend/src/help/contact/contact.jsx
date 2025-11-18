@@ -12,9 +12,9 @@ function Contact() {
 
                 <p className="contact-text">
                     📞 Contact Information: <br />
-                    Email: support@soundhub.com <br />
-                    Phone: +66 98 123 4567 <br />
-                    Address: SoundShare Development Team, Bangkok, Thailand
+                    Email: soracha.cha@spumail.net <br />
+                    Phone: +66 096 137 9867 <br />
+                    Address:  Bangkok, Thailand
                 </p>  
 
                 {/* Social Icons */}

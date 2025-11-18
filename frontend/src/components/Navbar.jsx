@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { io } from "socket.io-client";
 import "./Navbar.css";
 import logo from "../assets/logo.png";
 import { FaBell } from "react-icons/fa";
@@ -12,7 +13,10 @@ function Navbar() {
   const [limits, setLimits] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [volume, setVolume] = useState(0.5);
+  const [showSlider, setShowSlider] = useState(false);
 
+  const socketRef = useRef(null);
   const navigate = useNavigate();
 
   const fetchLimits = async (id) => {
@@ -39,12 +43,21 @@ function Navbar() {
 
   useEffect(() => {
     const updateUserFromLocalStorage = () => {
-      const saved = localStorage.getItem("user");
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
         setUser(parsed);
         fetchLimits(parsed._id);
         loadNotifications();
+
+        if (!socketRef.current) {
+          socketRef.current = io("http://localhost:5000");
+          socketRef.current.on("notification", (notif) => {
+            const newNotif = { ...notif, unread: true };
+            setNotifications((prev) => [newNotif, ...prev]);
+            setUnreadCount((prev) => prev + 1);
+          });
+        }
       } else {
         setUser(null);
         setLimits(null);
@@ -53,10 +66,8 @@ function Navbar() {
       }
     };
 
-    // โหลดตอน mount
     updateUserFromLocalStorage();
 
-    // ตรวจสอบ URL ว่ามี token จาก Google login
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     if (token) {
@@ -73,15 +84,22 @@ function Navbar() {
         });
     }
 
-    // ฟัง event login/logout
-    window.addEventListener("userLoggedIn", updateUserFromLocalStorage);
-    window.addEventListener("userLoggedOut", updateUserFromLocalStorage);
+    const handleLoginEvent = () => updateUserFromLocalStorage();
+    const handleProfileUpdated = (event) => {
+      setUser(event.detail);
+    };
+
+    window.addEventListener("userLoggedIn", handleLoginEvent);
+    window.addEventListener("userLoggedOut", handleLoginEvent);
+    window.addEventListener("profileUpdated", handleProfileUpdated);
 
     return () => {
-      window.removeEventListener("userLoggedIn", updateUserFromLocalStorage);
-      window.removeEventListener("userLoggedOut", updateUserFromLocalStorage);
+      window.removeEventListener("userLoggedIn", handleLoginEvent);
+      window.removeEventListener("userLoggedOut", handleLoginEvent);
+      window.removeEventListener("profileUpdated", handleProfileUpdated);
+      if (socketRef.current) socketRef.current.disconnect();
     };
-  }, []);
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -101,6 +119,9 @@ function Navbar() {
     navigate("/");
   };
 
+  const handleVolumeChange = (value) => setVolume(Number(value));
+  const avatarUrl = user?.avatar || user?.picture || defaultAvatar;
+
   return (
     <header className="header">
       <div className="header-left">
@@ -110,6 +131,27 @@ function Navbar() {
       </div>
 
       <div className="header-right">
+        <div className="volume-container">
+          <button
+            className="icon-button"
+            onClick={() => setShowSlider(!showSlider)}
+            title="ปรับระดับเสียงทั้งหมดในเว็บ"
+          >
+            🔊
+          </button>
+          {showSlider && (
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={(e) => handleVolumeChange(e.target.value)}
+              className="volume-slider"
+            />
+          )}
+        </div>
+
         {limits && user && (
           <div className="usage-info">
             Uploads: {limits.uploadCount}/{limits.maxUpload} | Downloads:{" "}
@@ -140,7 +182,7 @@ function Navbar() {
         <Link to="/premium" className="nav-link">
           Premium
         </Link>
-        <Link to="analytics" className="nav-link">
+        <Link to="/analytics" className="nav-link">
           Your Analytics
         </Link>
 
@@ -156,11 +198,7 @@ function Navbar() {
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
-              <img
-                src={user.picture || defaultAvatar}
-                alt="Profile"
-                className="avatar"
-              />
+              <img src={avatarUrl} alt="Profile" className="avatar" />
             </Link>
             <button onClick={handleLogout} className="gradient-login-button">
               Logout

@@ -17,12 +17,13 @@ import About from "./help/about/about";
 import Contact from "./help/contact/contact";
 import QandA from "./help/q&a/qqa";
 import AdminPanel from "./admin/AdminPanel";
-import AdminSongs from "./admin/AdminSongs"; // <-- import หน้าใหม่
+import AdminSongs from "./admin/AdminSongs";
 import AdminAnalytics from "./admin/AdminAnalytics";
 import UserAnalytics from "./analytic/UserAnalytics";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [user, setUser] = useState(null);
 
   // ตรวจสอบ token ตอน mount
   useEffect(() => {
@@ -38,11 +39,13 @@ function App() {
       })
       .then((data) => {
         if (data && data._id) {
+          setUser(data);
           localStorage.setItem("user", JSON.stringify(data));
           window.dispatchEvent(new Event("userLoggedIn"));
+          console.log("✅ Logged in via token:", data);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error("❌ Auth failed:", err));
   }, []);
 
   return (
