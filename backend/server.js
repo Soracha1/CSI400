@@ -18,10 +18,6 @@ dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
-
-
-
-
 // ================= Middleware =================
 app.use(
   cors({
@@ -48,12 +44,20 @@ const notificationSchema = new mongoose.Schema({
 });
 const Notification = mongoose.model("Notification", notificationSchema);
 
+// ✅ อัปเดต User Schema เพิ่ม Social Media
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
   password: String,
   googleId: String,
   picture: String,
+  avatar: String,
+  bio: String,
+  // ✅ เพิ่มฟิลด์ Social Media
+  tiktok: { type: String, default: '', trim: true },
+  instagram: { type: String, default: '', trim: true },
+  facebook: { type: String, default: '', trim: true },
+  // ฟิลด์เดิม
   downloadCount: { type: Number, default: 0 },
   uploadCount: { type: Number, default: 0 },
   maxUpload: { type: Number, default: 3 },
@@ -102,6 +106,51 @@ const isAdmin = async (req, res, next) => {
     return res.status(403).json({ message: "Admin only" });
   next();
 };
+
+// ================= สร้างโฟลเดอร์ =================
+const uploadsDir = path.join(__dirname, "uploads/music");
+const avatarsDir = path.join(__dirname, "uploads/avatars");
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log("✅ Created music directory");
+}
+
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+  console.log("✅ Created avatars directory");
+}
+
+// ================= Multer Config for Music =================
+const musicStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+});
+const musicUpload = multer({ storage: musicStorage });
+
+// ================= Multer Config for Avatar =================
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, avatarsDir),
+  filename: (req, file, cb) => {
+    const uniqueName = `avatar-${req.userId || Date.now()}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const avatarUpload = multer({ 
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("รองรับเฉพาะไฟล์รูปภาพเท่านั้น (jpeg, jpg, png, gif, webp)"));
+  }
+});
 
 // ================= Auth Routes =================
 app.post("/api/register", async (req, res) => {
@@ -214,19 +263,10 @@ app.get(
 );
 
 // ================= Song Upload =================
-const uploadsDir = path.join(__dirname, "uploads/music");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-const upload = multer({ storage });
-
 app.post(
   "/api/upload",
   verifyToken,
-  upload.single("music"),
+  musicUpload.single("music"),
   async (req, res) => {
     try {
       const user = await User.findById(req.userId);
@@ -403,6 +443,8 @@ app.get("/api/user/:id/favorites", verifyToken, async (req, res) => {
 app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
     if (user.role === "user" && user.downloadCount >= user.maxDownload)
       return res.status(403).json({ message: "Download limit reached" });
 
@@ -412,19 +454,77 @@ app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
       { new: true }
     );
 
+    if (!song) return res.status(404).json({ message: "Song not found" });
+
     user.downloadCount += 1;
     await user.save();
 
-    // ส่ง notification realtime
-    io.emit("notification", {
+    const notification = await Notification.create({
       type: "download",
       message: `${user.username} downloaded ${song.title}`,
       user: user._id,
       song: song._id,
-      createdAt: new Date(),
     });
 
-    res.json(song);
+    io.emit("notification", notification);
+
+    res.json({ 
+      message: "Download recorded successfully",
+      song,
+      notification 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/songs/:id/file", verifyToken, async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) {
+      return res.status(404).json({ message: "Song not found" });
+    }
+
+    const filePath = path.join(__dirname, song.filePath);
+    
+    if (!fs.existsSync(filePath)) {
+      console.error("❌ File not found:", filePath);
+      return res.status(404).json({ 
+        message: "File not found on server",
+        path: song.filePath 
+      });
+    }
+
+    console.log("✅ Sending file:", filePath);
+
+    res.download(filePath, `${song.title}.mp3`, (err) => {
+      if (err) {
+        console.error("❌ Download error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: "Error downloading file" });
+        }
+      }
+    });
+  } catch (err) {
+    console.error("❌ Server error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/users/download-quota", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const allowed = user.role === "admin" || user.downloadCount < user.maxDownload;
+    
+    res.json({
+      allowed,
+      current: user.downloadCount,
+      max: user.maxDownload,
+      remaining: Math.max(0, user.maxDownload - user.downloadCount),
+      role: user.role,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -449,6 +549,28 @@ app.get("/api/user/:id/downloads", verifyToken, async (req, res) => {
   }
 });
 
+app.get("/api/songs/:id/check", verifyToken, async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) {
+      return res.json({ exists: false, message: "Song not found in DB" });
+    }
+
+    const filePath = path.join(__dirname, song.filePath);
+    const fileExists = fs.existsSync(filePath);
+    
+    res.json({
+      exists: fileExists,
+      song: song.title,
+      filePath: song.filePath,
+      fullPath: filePath,
+      message: fileExists ? "File exists ✅" : "File not found ❌"
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ================= User Routes =================
 app.get("/api/user/:id/uploads", async (req, res) => {
   try {
@@ -468,6 +590,79 @@ app.get("/api/user/:id/limits", async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Update User Profile ✅ อัปเดตให้รองรับ Social Media =================
+app.put("/api/user/:id", verifyToken, avatarUpload.single("avatar"), async (req, res) => {
+  try {
+    console.log("📝 Update request received for user:", req.params.id);
+    console.log("📋 Body:", req.body);
+    console.log("📷 File:", req.file);
+
+    // ตรวจสอบว่าเป็นเจ้าของ profile หรือไม่
+    if (req.userId !== req.params.id) {
+      return res.status(403).json({ message: "คุณไม่มีสิทธิ์แก้ไขโปรไฟล์นี้" });
+    }
+
+    const { username, email, bio, tiktok, instagram, facebook } = req.body;
+    
+    // ✅ ข้อมูลที่จะอัพเดท (เพิ่ม Social Media)
+    const updateData = {
+      username,
+      email,
+      bio: bio || "",
+      tiktok: tiktok || "",
+      instagram: instagram || "",
+      facebook: facebook || "",
+    };
+
+    // ถ้ามีการอัพโหลดรูปใหม่
+    if (req.file) {
+      updateData.avatar = `http://localhost:5000/uploads/avatars/${req.file.filename}`;
+      updateData.picture = updateData.avatar; // ให้ picture เป็นค่าเดียวกับ avatar
+      console.log("📷 New avatar path:", updateData.avatar);
+      
+      // ลบรูปเก่า (ถ้ามี)
+      const oldUser = await User.findById(req.params.id);
+      if (oldUser.avatar && oldUser.avatar.includes('uploads/avatars')) {
+        const oldPath = path.join(__dirname, oldUser.avatar.replace('http://localhost:5000/', ''));
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+          console.log("🗑️ Old avatar deleted");
+        }
+      }
+    }
+
+    // อัพเดทข้อมูล
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+    }
+
+    console.log("✅ Profile updated successfully:", updatedUser.username);
+    console.log("🌐 Social Media updated:", {
+      tiktok: updatedUser.tiktok,
+      instagram: updatedUser.instagram,
+      facebook: updatedUser.facebook
+    });
+    
+    res.json({
+      message: "อัพเดทโปรไฟล์สำเร็จ",
+      user: updatedUser,
+    });
+
+  } catch (err) {
+    console.error("❌ Update profile error:", err);
+    res.status(500).json({ 
+      message: "เกิดข้อผิดพลาดในการอัพเดทโปรไฟล์",
+      error: err.message 
+    });
   }
 });
 
@@ -502,8 +697,6 @@ app.post("/api/notifications", async (req, res) => {
   }
 });
 
-// =========================
-// TAGS ดึงแท็กทั้งหมด
 // ================= Tags =================
 app.get("/api/tags", async (req, res) => {
   try {
@@ -550,13 +743,9 @@ app.use(
   express.static(path.join(__dirname, "uploads"))
 );
 
-
-
 // ================= Socket.IO =================
-// สร้าง HTTP server
 const server = http.createServer(app);
 
-// สร้าง Socket.IO server
 const io = new Server(server, {
   cors: {
     origin: ["http://localhost:3000", "http://localhost:5173"],
@@ -570,7 +759,6 @@ io.on("connection", (socket) => {
     console.log("❌ Socket disconnected:", socket.id)
   );
 });
-
 
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;

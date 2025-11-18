@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import Swal from "sweetalert2"; // แจ้งเตือน
+import Swal from "sweetalert2";
 import { FaPlay, FaPause, FaDownload, FaArrowLeft } from "react-icons/fa";
 import "./SongDetail.css";
 
@@ -56,7 +56,7 @@ function SongDetail() {
         return;
       }
 
-      // ตรวจสอบโควต้าจาก backend
+      // 1. ตรวจสอบโควต้าจาก backend
       const quotaRes = await axios.get(
         `http://localhost:5000/api/users/download-quota`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -66,8 +66,8 @@ function SongDetail() {
         Swal.fire({
           icon: "error",
           title: "โควต้าดาวน์โหลดเต็ม",
-          text: "คุณไม่สามารถดาวน์โหลดเพลงได้อีกในตอนนี้",
-          timer: 2000,
+          text: `คุณดาวน์โหลดครบ ${quotaRes.data.max} เพลงแล้ว (เหลือ ${quotaRes.data.remaining} เพลง)`,
+          timer: 3000,
           showConfirmButton: false,
           toast: true,
           position: "top-end",
@@ -75,28 +75,34 @@ function SongDetail() {
         return;
       }
 
-      // ดาวน์โหลดไฟล์เป็น Blob
+      // 2. บันทึกประวัติการดาวน์โหลดก่อน (สำคัญ!)
+      await axios.post(
+        `http://localhost:5000/api/songs/${song._id}/download`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // 3. ดาวน์โหลดไฟล์จาก route ใหม่ที่มี authentication
       const response = await axios.get(
-        `http://localhost:5000/${song.filePath}`,
+        `http://localhost:5000/api/songs/${song._id}/file`,
         {
           responseType: "blob",
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
+      // 4. สร้าง URL และดาวน์โหลดไฟล์
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `${song.title}.mp3`);
+      document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
-      // เพิ่ม download count
-      await axios.post(
-        `http://localhost:5000/api/songs/${song._id}/download`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // 5. ส่ง event เพื่ออัพเดทหน้า Profile
+      window.dispatchEvent(new Event("downloadSuccess"));
 
       Swal.fire({
         icon: "success",
@@ -109,10 +115,21 @@ function SongDetail() {
       });
     } catch (err) {
       console.error("Download error:", err);
+      
+      let errorMsg = "ไม่สามารถดาวน์โหลดเพลงได้";
+      
+      if (err.response?.status === 404) {
+        errorMsg = "ไม่พบไฟล์เพลงบนเซิร์ฟเวอร์";
+      } else if (err.response?.status === 403) {
+        errorMsg = err.response.data.message || "โควต้าดาวน์โหลดเต็ม";
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      }
+
       Swal.fire({
         icon: "error",
         title: "เกิดข้อผิดพลาด",
-        text: "ไม่สามารถดาวน์โหลดเพลงได้",
+        text: errorMsg,
         timer: 2000,
         showConfirmButton: false,
         toast: true,
