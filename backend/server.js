@@ -18,22 +18,6 @@ dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
-// ================= Socket.IO Setup (ต้องทำก่อน routes!) =================
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173"],
-    credentials: true,
-  },
-});
-
-io.on("connection", (socket) => {
-  console.log("✅ Socket connected:", socket.id);
-  socket.on("disconnect", () =>
-    console.log("❌ Socket disconnected:", socket.id)
-  );
-});
-
 // ================= Middleware =================
 app.use(
   cors({
@@ -514,6 +498,8 @@ app.post("/api/notifications", async (req, res) => {
   }
 });
 
+// =========================
+// TAGS ดึงแท็กทั้งหมด
 // ================= Tags =================
 app.get("/api/tags", async (req, res) => {
   try {
@@ -559,6 +545,28 @@ app.use(
   },
   express.static(path.join(__dirname, "uploads"))
 );
+
+
+
+// ================= Socket.IO =================
+// สร้าง HTTP server
+const server = http.createServer(app);
+
+// สร้าง Socket.IO server
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("✅ Socket connected:", socket.id);
+  socket.on("disconnect", () =>
+    console.log("❌ Socket disconnected:", socket.id)
+  );
+});
+
 
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
