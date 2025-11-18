@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import Swal from "sweetalert2"; // ✅ เพิ่ม sweetalert2
+import Swal from "sweetalert2";
 import "./Login.css";
 
 function Login() {
@@ -24,21 +24,17 @@ function Login() {
       })
       .then((res) => {
         localStorage.setItem("user", JSON.stringify(res.data));
-        Swal.fire({
-          icon: "success",
-          title: "Login success!",
-          text: "Google login successful",
-        });
-        window.dispatchEvent(new Event("userLoggedIn"));
+
+        // ใช้ setTimeout เล็กน้อยเพื่อให้ Navbar อัปเดต
+        setTimeout(() => {
+          window.dispatchEvent(new Event("userLoggedIn"));
+        }, 100);
+
+        Swal.fire({ icon: "success", title: "Login success!" });
         navigate("/dashboard");
       })
-      .catch((err) => {
-        console.error(err);
-        Swal.fire({
-          icon: "error",
-          title: "Login failed",
-          text: "Failed to fetch user info from Google login",
-        });
+      .catch(() => {
+        Swal.fire({ icon: "error", title: "Login failed" });
       });
   }, [searchParams, navigate]);
 
@@ -51,7 +47,6 @@ function Login() {
       const res = await axios.post("http://localhost:5000/api/login", form, {
         withCredentials: true,
       });
-
       const { token } = res.data;
       localStorage.setItem("token", token);
 
@@ -61,20 +56,14 @@ function Login() {
       });
 
       localStorage.setItem("user", JSON.stringify(userRes.data));
-
-      Swal.fire({
-        icon: "success",
-        title: "Login success!",
-        text: "You have successfully logged in",
-      });
       window.dispatchEvent(new Event("userLoggedIn"));
+      Swal.fire({ icon: "success", title: "Login success!" });
       navigate("/dashboard");
     } catch (err) {
-      console.error(err);
       Swal.fire({
         icon: "error",
         title: "Login failed",
-        text: err.response?.data?.message || "Login failed",
+        text: err.response?.data?.message || "",
       });
     }
   };
@@ -110,7 +99,6 @@ function Login() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="toggle-password"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
@@ -119,7 +107,6 @@ function Login() {
           <button type="submit" className="login-button">
             Log in
           </button>
-
           <button type="button" className="google-btn" onClick={googleLogin}>
             <img
               src="https://cdn-icons-png.flaticon.com/512/300/300221.png"

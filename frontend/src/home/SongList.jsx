@@ -67,7 +67,6 @@ function SongList({ searchTerm }) {
 
   const handleDownload = async (song) => {
     try {
-      // ตรวจสอบว่า login หรือยัง
       if (!token) {
         Swal.fire({
           icon: "error",
@@ -81,11 +80,12 @@ function SongList({ searchTerm }) {
         return;
       }
 
-      // ตรวจสอบโควต้าจาก backend
+      // ตรวจสอบโควต้า
       const quotaRes = await axios.get(
-        `http://localhost:5000/api/users/download-quota`,
+        "http://localhost:5000/api/users/download-quota",
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       if (!quotaRes.data.allowed) {
         Swal.fire({
           icon: "error",
@@ -99,11 +99,14 @@ function SongList({ searchTerm }) {
         return;
       }
 
-      // ดาวน์โหลดเพลงเป็น blob
-      const response = await axios.get(`http://localhost:5000/${song.filePath}`, {
-        responseType: "blob",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ดาวน์โหลดไฟล์
+      const response = await axios.get(
+        `http://localhost:5000/${song.filePath}`,
+        {
+          responseType: "blob",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
@@ -113,14 +116,13 @@ function SongList({ searchTerm }) {
       link.click();
       link.remove();
 
-      // เพิ่ม download count ใน backend
+      // เพิ่ม download count
       await axios.post(
         `http://localhost:5000/api/songs/${song._id}/download`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // แจ้งเตือนดาวน์โหลดสำเร็จ
       Swal.fire({
         icon: "success",
         title: "ดาวน์โหลดเพลงสำเร็จ 🎵",
@@ -273,7 +275,9 @@ function SongList({ searchTerm }) {
 
       <div className="song-controls" onClick={(e) => e.stopPropagation()}>
         <button
-          className={`song-play-btn ${currentPlaying === song._id ? "active" : ""}`}
+          className={`song-play-btn ${
+            currentPlaying === song._id ? "active" : ""
+          }`}
           onClick={(e) => {
             e.stopPropagation();
             togglePlay(song._id);
@@ -319,9 +323,9 @@ function SongList({ searchTerm }) {
     <div className="songlist-wrapper">
       {!searchTerm && !filterTag && (
         <>
-          <h2 className="songlist-title">💖 เพลงที่ถูกใจมากที่สุด</h2>
+          <h2 className="songlist-title">💖 Most Liked!</h2>
           <div className="song-grid">{topLikes.map(renderSongBox)}</div>
-          <h2 className="songlist-title">⬇ เพลงที่ถูกดาวน์โหลดมากที่สุด</h2>
+          <h2 className="songlist-title">⬇ Most Downloaded</h2>
           <div className="song-grid">{topDownloads.map(renderSongBox)}</div>
         </>
       )}
