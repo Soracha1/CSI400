@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import "./SongList.css";
+
+const BASE_URL = "http://localhost:5000";
 
 function SongList({ searchTerm }) {
   const [songs, setSongs] = useState([]);
@@ -15,6 +17,7 @@ function SongList({ searchTerm }) {
   const [durations, setDurations] = useState({});
   const [currentTimes, setCurrentTimes] = useState({});
 
+  const audioIntervals = useRef({});
   const navigate = useNavigate();
   const songsPerPage = 5;
 
@@ -30,16 +33,12 @@ function SongList({ searchTerm }) {
     setCurrentPage(0);
   }, [searchTerm, filterTag]);
 
-  useEffect(() => {
-    setFilterTag(null);
-  }, [searchTerm]);
-
   const loadAllData = async () => {
     try {
       const [allRes, likesRes, dlRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/songs"),
-        axios.get("http://localhost:5000/api/songs/top-likes"),
-        axios.get("http://localhost:5000/api/songs/top-downloads"),
+        axios.get(`${BASE_URL}/api/songs`),
+        axios.get(`${BASE_URL}/api/songs/top-likes`),
+        axios.get(`${BASE_URL}/api/songs/top-downloads`),
       ]);
       setSongs(allRes.data);
       setTopLikes(likesRes.data);
@@ -53,78 +52,68 @@ function SongList({ searchTerm }) {
     if (!user._id || !token) return;
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/user/${user._id}/favorites`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `${BASE_URL}/api/user/${user._id}/favorites`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-      setFavorites(res.data.map(song => song._id));
+      setFavorites(res.data.map((song) => song._id));
     } catch (err) {
       console.error("Error loading favorites:", err);
     }
   };
 
   const handleLike = async (id) => {
+    if (!token) {
+      Swal.fire({
+        icon: "error",
+        title: "กรุณาเข้าสู่ระบบ",
+        toast: true,
+        position: "top-end",
+        timer: 2000,
+      });
+      return;
+    }
     try {
-      if (!token) {
-        Swal.fire({
-          icon: "error",
-          title: "กรุณาเข้าสู่ระบบ",
-          text: "คุณต้องเข้าสู่ระบบก่อนกดถูกใจ",
-          timer: 2000,
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-        });
-        return;
-      }
-
       const isFav = favorites.includes(id);
 
       if (isFav) {
-        // Remove from favorites
-        await axios.delete(
-          `http://localhost:5000/api/songs/${id}/favorite`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setFavorites(prev => prev.filter(f => f !== id));
+        await axios.delete(`${BASE_URL}/api/songs/${id}/favorite`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFavorites((prev) => prev.filter((f) => f !== id));
       } else {
-        // Add to favorites
         await axios.post(
-          `http://localhost:5000/api/songs/${id}/favorite`,
+          `${BASE_URL}/api/songs/${id}/favorite`,
           {},
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
-        setFavorites(prev => [...prev, id]);
+        setFavorites((prev) => [...prev, id]);
       }
 
-      // Trigger event for Profilefavorites to refresh
       window.dispatchEvent(new Event("favoriteChanged"));
-      
       loadAllData();
     } catch (err) {
       console.error("Like error:", err);
-      if (err.response?.status === 400 && err.response?.data?.message === "Already in favorites") {
-        setFavorites(prev => [...prev, id]);
-      }
     }
   };
 
   const handleDownload = async (song) => {
-    try {
-      if (!token) {
-        Swal.fire({
-          icon: "error",
-          title: "คุณยังไม่ได้เข้าสู่ระบบ",
-          text: "กรุณาเข้าสู่ระบบก่อนดาวน์โหลดเพลง",
-          timer: 2000,
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-        });
-        return;
-      }
+    if (!token) {
+      Swal.fire({
+        icon: "error",
+        title: "กรุณาเข้าสู่ระบบ",
+        toast: true,
+        position: "top-end",
+        timer: 2000,
+      });
+      return;
+    }
 
-      // ดาวน์โหลดเพลงเป็น blob
-      const response = await axios.get(`http://localhost:5000/${song.filePath}`, {
+    try {
+      const response = await axios.get(`${BASE_URL}/${song.filePath}`, {
         responseType: "blob",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -137,34 +126,30 @@ function SongList({ searchTerm }) {
       link.click();
       link.remove();
 
-      // เพิ่ม download count ใน backend
       await axios.post(
-        `http://localhost:5000/api/songs/${song._id}/download`,
+        `${BASE_URL}/api/songs/${song._id}/download`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       Swal.fire({
         icon: "success",
         title: "ดาวน์โหลดเพลงสำเร็จ 🎵",
-        text: `คุณดาวน์โหลดเพลง "${song.title}" เรียบร้อยแล้ว`,
-        timer: 2000,
-        showConfirmButton: false,
         toast: true,
         position: "top-end",
+        timer: 2000,
       });
-
       loadAllData();
     } catch (err) {
       console.error("Download error:", err);
       Swal.fire({
         icon: "error",
-        title: "เกิดข้อผิดพลาด",
-        text: err.response?.data?.message || `ไม่สามารถดาวน์โหลดเพลง "${song.title}" ได้`,
-        timer: 2000,
-        showConfirmButton: false,
+        title: "ดาวน์โหลดล้มเหลว",
         toast: true,
         position: "top-end",
+        timer: 2000,
       });
     }
   };
@@ -173,11 +158,13 @@ function SongList({ searchTerm }) {
     const audio = document.getElementById(`audio-${id}`);
     if (!audio) return;
 
+    // pause previous
     if (currentPlaying && currentPlaying !== id) {
       const prevAudio = document.getElementById(`audio-${currentPlaying}`);
       if (prevAudio) {
         prevAudio.pause();
         prevAudio.currentTime = 0;
+        clearInterval(audioIntervals.current[currentPlaying]);
       }
     }
 
@@ -185,18 +172,19 @@ function SongList({ searchTerm }) {
       audio.play();
       setCurrentPlaying(id);
 
-      const interval = setInterval(() => {
+      audioIntervals.current[id] = setInterval(() => {
         setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
       }, 200);
 
       audio.onended = () => {
-        clearInterval(interval);
+        clearInterval(audioIntervals.current[id]);
         setCurrentPlaying(null);
         setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
       };
     } else {
       audio.pause();
       audio.currentTime = 0;
+      clearInterval(audioIntervals.current[id]);
       setCurrentPlaying(null);
       setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
     }
@@ -212,7 +200,7 @@ function SongList({ searchTerm }) {
   const normalize = (text) => text?.toString().trim().toLowerCase() || "";
 
   let filteredSongs = songs;
-  if (searchTerm && searchTerm.trim() !== "") {
+  if (searchTerm?.trim()) {
     const term = normalize(searchTerm);
     filteredSongs = songs.filter(
       (s) =>
@@ -242,7 +230,6 @@ function SongList({ searchTerm }) {
       className="song-box"
       key={song._id}
       onClick={() => navigate(`/song/${song._id}`)}
-      style={{ cursor: "pointer" }}
     >
       <div
         className="heart-icon"
@@ -252,14 +239,6 @@ function SongList({ searchTerm }) {
         }}
       >
         {favorites.includes(song._id) ? "💖" : "🤍"}
-      </div>
-
-      <div className="wave-anim">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
       </div>
 
       <div className="song-info">
@@ -296,21 +275,16 @@ function SongList({ searchTerm }) {
 
       <div className="song-controls" onClick={(e) => e.stopPropagation()}>
         <button
-          className={`song-play-btn ${currentPlaying === song._id ? "active" : ""}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            togglePlay(song._id);
-          }}
+          className={`song-play-btn ${
+            currentPlaying === song._id ? "active" : ""
+          }`}
+          onClick={() => togglePlay(song._id)}
         >
           {currentPlaying === song._id ? "⏹ หยุด" : "▶ เล่น"}
         </button>
-
         <button
           className="song-download-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDownload(song);
-          }}
+          onClick={() => handleDownload(song)}
         >
           ⬇ ดาวน์โหลด
         </button>
@@ -329,7 +303,7 @@ function SongList({ searchTerm }) {
 
       <audio
         id={`audio-${song._id}`}
-        src={`http://localhost:5000/${song.filePath}`}
+        src={`${BASE_URL}/${song.filePath}`}
         onLoadedMetadata={(e) =>
           setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
         }
@@ -341,9 +315,9 @@ function SongList({ searchTerm }) {
     <div className="songlist-wrapper">
       {!searchTerm && !filterTag && (
         <>
-          <h2 className="songlist-title">💖 เพลงที่ถูกใจมากที่สุด</h2>
+          <h2 className="songlist-title">💖 Most Liked!</h2>
           <div className="song-grid">{topLikes.map(renderSongBox)}</div>
-          <h2 className="songlist-title">⬇ เพลงที่ถูกดาวน์โหลดมากที่สุด</h2>
+          <h2 className="songlist-title">⬇ Most Downloaded</h2>
           <div className="song-grid">{topDownloads.map(renderSongBox)}</div>
         </>
       )}

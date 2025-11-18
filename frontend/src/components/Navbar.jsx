@@ -1,27 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { io } from "socket.io-client";
 import "./Navbar.css";
 import logo from "../assets/logo.png";
-import { FaBell, FaArrowUp, FaArrowDown } from "react-icons/fa";
-import { io } from "socket.io-client";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-
-dayjs.extend(relativeTime);
+import { FaBell } from "react-icons/fa";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
 function Navbar() {
-  const [volume, setVolume] = useState(0.5);
-  const [showSlider, setShowSlider] = useState(false);
   const [user, setUser] = useState(null);
   const [limits, setLimits] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [volume, setVolume] = useState(0.5);
+  const [showSlider, setShowSlider] = useState(false);
 
-  const dropdownRef = useRef(null);
   const socketRef = useRef(null);
   const navigate = useNavigate();
 
@@ -48,55 +42,64 @@ function Navbar() {
   };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      setUser(parsed);
-      fetchLimits(parsed._id);
-      loadNotifications();
-
-      socketRef.current = io("http://localhost:5000");
-      socketRef.current.on("notification", (notif) => {
-        const newNotif = { ...notif, unread: true };
-        setNotifications((prev) => [newNotif, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-      });
-    }
-
-    const handleLoginEvent = () => {
-      const saved = localStorage.getItem("user");
-      if (saved) {
-        const parsed = JSON.parse(saved);
+    const updateUserFromLocalStorage = () => {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
         setUser(parsed);
         fetchLimits(parsed._id);
         loadNotifications();
+
+        if (!socketRef.current) {
+          socketRef.current = io("http://localhost:5000");
+          socketRef.current.on("notification", (notif) => {
+            const newNotif = { ...notif, unread: true };
+            setNotifications((prev) => [newNotif, ...prev]);
+            setUnreadCount((prev) => prev + 1);
+          });
+        }
+      } else {
+        setUser(null);
+        setLimits(null);
+        setNotifications([]);
+        setUnreadCount(0);
       }
     };
 
-    // ✅ ฟังการอัปเดตโปรไฟล์
+    updateUserFromLocalStorage();
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      localStorage.setItem("token", token);
+      fetch("http://localhost:5000/auth/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          localStorage.setItem("user", JSON.stringify(data));
+          window.dispatchEvent(new Event("userLoggedIn"));
+          updateUserFromLocalStorage();
+          navigate("/dashboard");
+        });
+    }
+
+    const handleLoginEvent = () => updateUserFromLocalStorage();
     const handleProfileUpdated = (event) => {
-      console.log("Navbar: Profile updated!", event.detail);
-      const updatedUser = event.detail;
-      setUser(updatedUser);
+      setUser(event.detail);
     };
 
     window.addEventListener("userLoggedIn", handleLoginEvent);
+    window.addEventListener("userLoggedOut", handleLoginEvent);
     window.addEventListener("profileUpdated", handleProfileUpdated);
 
     return () => {
       window.removeEventListener("userLoggedIn", handleLoginEvent);
+      window.removeEventListener("userLoggedOut", handleLoginEvent);
       window.removeEventListener("profileUpdated", handleProfileUpdated);
       if (socketRef.current) socketRef.current.disconnect();
     };
-  }, []);
-
-  const handleVolumeChange = (value) => {
-    const newVolume = parseFloat(value);
-    setVolume(newVolume);
-    document.querySelectorAll("audio, video").forEach((el) => {
-      el.volume = newVolume;
-    });
-  };
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -112,51 +115,18 @@ function Navbar() {
       position: "top-end",
     });
 
-    setUser(null);
-    setLimits(null);
-    navigate("/");
     window.dispatchEvent(new Event("userLoggedOut"));
+    navigate("/");
   };
 
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
-    if (!showDropdown) {
-      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-      setUnreadCount(0);
-    }
-  };
-
-  const renderNotificationMessage = (n) => {
-    let icon = null;
-    let text = n.message || "";
-
-    if (n.type === "upload" && n.user && n.song) {
-      icon = <FaArrowUp style={{ color: "#4edfff" }} />;
-      text = `${n.user.username} uploaded "${n.song.title}"`;
-    } else if (n.type === "download" && n.user && n.song) {
-      icon = <FaArrowDown style={{ color: "#ff8c42" }} />;
-      text = `${n.user.username} downloaded "${n.song.title}"`;
-    }
-
-    const time = dayjs(n.createdAt).fromNow();
-
-    return (
-      <div className="notification-content">
-        {icon}
-        <span>{text}</span>
-        <small className="notification-time">{time}</small>
-      </div>
-    );
-  };
-
-  // ✅ ใช้ avatar หรือ picture (รองรับทั้งสอง)
+  const handleVolumeChange = (value) => setVolume(Number(value));
   const avatarUrl = user?.avatar || user?.picture || defaultAvatar;
 
   return (
     <header className="header">
       <div className="header-left">
         <Link to="/">
-          <img src={logo} alt="Sound Share Logo" className="logo" />
+          <img src={logo} alt="Logo" className="logo" />
         </Link>
       </div>
 
@@ -195,48 +165,40 @@ function Navbar() {
           </Link>
         )}
 
+        {user && user.role === "admin" && (
+          <>
+            <Link to="/admin" className="nav-link admin-link">
+              Admin Panel
+            </Link>
+            <Link to="/admin/songs" className="nav-link admin-link">
+              Songs Management
+            </Link>
+            <Link to="/admin/analytics" className="nav-link admin-link">
+              Analytics
+            </Link>
+          </>
+        )}
+
         <Link to="/premium" className="nav-link">
           Premium
         </Link>
+        <Link to="/analytics" className="nav-link">
+          Your Analytics
+        </Link>
 
         {user && (
-          <div className="notification-wrapper" ref={dropdownRef}>
-            <button
-              className="icon-button"
-              onClick={toggleDropdown}
-              title="ดูการแจ้งเตือน"
-            >
+          <div className="notification-wrapper">
+            <button className="icon-button">
               <FaBell size={18} />
               {unreadCount > 0 && <span className="notification-dot"></span>}
             </button>
-
-            {showDropdown && (
-              <div className="notification-dropdown">
-                {notifications.length > 0 ? (
-                  notifications.map((n) => (
-                    <div
-                      key={n._id || Math.random()}
-                      className={`notification-item ${n.unread ? "unread" : ""}`}
-                    >
-                      {renderNotificationMessage(n)}
-                    </div>
-                  ))
-                ) : (
-                  <div className="notification-empty">No notifications</div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
-              <img
-                src={avatarUrl}
-                alt="Profile"
-                className="avatar"
-              />
+              <img src={avatarUrl} alt="Profile" className="avatar" />
             </Link>
             <button onClick={handleLogout} className="gradient-login-button">
               Logout
