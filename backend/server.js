@@ -18,21 +18,9 @@ dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
-// ================= Socket.IO Setup (ต้องทำก่อน routes!) =================
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173"],
-    credentials: true,
-  },
-});
 
-io.on("connection", (socket) => {
-  console.log("✅ Socket connected:", socket.id);
-  socket.on("disconnect", () =>
-    console.log("❌ Socket disconnected:", socket.id)
-  );
-});
+
+
 
 // ================= Middleware =================
 app.use(
