@@ -75,6 +75,7 @@ function App() {
           <Route path="/contact" element={<Contact />} />
          <Route path="/qa" element={<QandA />} />
           <Route path="/help" element={<Help />} />
+          <Route path="/profile/:id" element={<Profile />} />
 
           
         </Routes>

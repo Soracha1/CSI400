@@ -342,9 +342,13 @@ app.get("/api/songs/top-downloads", async (req, res) => {
   }
 });
 
+
+
 app.get("/api/songs/:id", async (req, res) => {
   try {
-    const song = await Song.findById(req.params.id);
+    // ✅ แก้ไข: เพิ่ม .populate("user") เพื่อดึงข้อมูลคนอัปโหลด (_id, username) มาด้วย
+    const song = await Song.findById(req.params.id).populate("user", "username picture");
+    
     if (!song) return res.status(404).json({ message: "Song not found" });
     res.json(song);
   } catch (err) {
