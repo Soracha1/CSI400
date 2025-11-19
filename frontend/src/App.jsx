@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
@@ -23,7 +23,8 @@ import UserAnalytics from "./analytic/UserAnalytics";
 import AdminGenCode from "./admin/AdminGenCode";
 import AdminCodeHistory from "./admin/AdminCodeHistory";
 
-function App() {
+function AppWrapper() {
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [user, setUser] = useState(null);
 
@@ -44,15 +45,20 @@ function App() {
           setUser(data);
           localStorage.setItem("user", JSON.stringify(data));
           window.dispatchEvent(new Event("userLoggedIn"));
-          console.log("✅ Logged in via token:", data);
         }
       })
-      .catch((err) => console.error("❌ Auth failed:", err));
+      .catch((err) => console.error("Auth failed:", err));
   }, []);
 
+  // หน้าไหนให้แสดง search bar
+  const showSearch =
+    location.pathname === "/" ||
+    location.pathname === "/dashboard" ||
+    location.pathname === "/admin/songs";
+
   return (
-    <Router>
-      <Navbar setSearchTerm={setSearchTerm} />
+    <>
+      <Navbar setSearchTerm={setSearchTerm} showSearch={showSearch} />
 
       <Routes>
         {/* Home */}
@@ -65,10 +71,22 @@ function App() {
             </>
           }
         />
+
+        {/* Admin */}
         <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/admin/songs" element={<AdminSongs />} />
+        <Route
+          path="/admin/songs"
+          element={
+            <AdminSongs
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+          }
+        />
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
         <Route path="/admin/generate-codes" element={<AdminGenCode />} />
+
+        {/* Analytics */}
         <Route path="/admin/code-history" element={<AdminCodeHistory />} />
         <Route path="/analytics" element={<UserAnalytics />} />
 
@@ -77,7 +95,7 @@ function App() {
         <Route path="/register" element={<Rigister />} />
 
         {/* User */}
-        <Route path="/dashboard" element={<SongList />} />
+        <Route path="/dashboard" element={<SongList searchTerm={searchTerm} />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:id" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
@@ -90,17 +108,17 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/qa" element={<QandA />} />
-
-        {/* Admin */}
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/admin/songs" element={<AdminSongs />} />
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-
-        {/* Analytics */}
-        <Route path="/analytics" element={<UserAnalytics />} />
       </Routes>
 
       <Footer />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppWrapper />
     </Router>
   );
 }

@@ -1,0 +1,97 @@
+/* AdminCodeHistory.css */
+
+/* Wrapper ของหน้า */
+.page-content {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 25px 20px;
+  margin-top: 150px;
+  background-color: #1b1b2f;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  color: #f5f5f5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ชื่อหน้า */
+.page-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.7);
+}
+
+/* Table wrapper */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ตาราง */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+/* Header ตาราง */
+table th {
+  background-color: #2e2e44;
+  color: #fdfdfd;
+  font-weight: 600;
+  padding: 12px 15px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Cell ตาราง */
+table td {
+  padding: 12px 15px;
+  background-color: #25253a;
+  color: #f5f5f5;
+  text-align: center;
+  border-bottom: 1px solid #3a3a5c;
+  transition: background 0.3s;
+}
+
+/* Hover row */
+table tbody tr:hover td {
+  background-color: #3a3a5c;
+}
+
+/* Stripe row */
+table tr:nth-child(even) td {
+  background-color: #1f1f30;
+}
+
+/* Highlight used status */
+.used-yes {
+  color: #ff4c4c;
+  font-weight: bold;
+}
+
+.used-no {
+  color: #4cff4c;
+  font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  table th,
+  table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .page-title {
+    font-size: 1.5rem;
+  }
+}
