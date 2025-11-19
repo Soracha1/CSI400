@@ -66,7 +66,7 @@ const userSchema = new mongoose.Schema(
     lastActivity: { type: Date, default: Date.now },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
   },
-  { timestamps: true } // ✅ เพิ่ม timestamps
+  { timestamps: true }
 );
 const User = mongoose.model("User", userSchema);
 
@@ -230,7 +230,6 @@ passport.use(
       try {
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
-          // สร้าง user ใหม่พร้อมค่า default
           user = await User.create({
             username: profile.displayName,
             email: profile.emails?.[0]?.value,
@@ -266,17 +265,31 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/" }),
   (req, res) => {
-    // สร้าง JWT token
     const token = jwt.sign(
       { id: req.user._id },
       process.env.JWT_SECRET || "secret",
       { expiresIn: "7d" }
     );
-
-    // redirect พร้อม token ให้ frontend
     res.redirect(`http://localhost:5173/?token=${token}`);
   }
 );
+
+// ================= Socket.IO Setup (ย้ายมาก่อน) =================
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("✅ Socket connected:", socket.id);
+  socket.on("disconnect", () =>
+    console.log("❌ Socket disconnected:", socket.id)
+  );
+});
 
 // ================= Song Upload =================
 app.post(
@@ -314,7 +327,6 @@ app.post(
       user.uploadCount += 1;
       await user.save();
 
-      // ส่ง notification realtime
       io.emit("notification", {
         type: "upload",
         message: `${user.username} uploaded ${song.title}`,
@@ -358,41 +370,31 @@ app.get("/api/songs/top-downloads", async (req, res) => {
   }
 });
 
-
-
+// ✅ แก้ไข: GET song by ID
 app.get("/api/songs/:id", async (req, res) => {
   try {
-    // ✅ แก้ไข: เพิ่ม .populate("user") เพื่อดึงข้อมูลคนอัปโหลด (_id, username) มาด้วย
-    const song = await Song.findById(req.params.id).populate("user", "username picture");
-    
-    const token = req.headers["authorization"]?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "No token" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
-    const user = await User.findById(decoded.id).select("-password");
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json(user);
+    const song = await Song.findById(req.params.id).populate(
+      "user",
+      "username picture"
+    );
+    if (!song) return res.status(404).json({ message: "Song not found" });
+    res.json(song);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// =========================
-// TAGS ดึงแท็กทั้งหมด
 // ================= Tags =================
 app.get("/api/tags", async (req, res) => {
   try {
     const tags = await Song.find().distinct("tags");
     res.json(tags.filter((t) => t && t.trim() !== ""));
-    const song = await Song.findById(req.params.id);
-    if (!song) return res.status(404).json({ message: "Song not found" });
-    res.json(song);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// ✅ แก้ไข: Search songs
 app.get("/api/songs/search", async (req, res) => {
   try {
     const { q, tag } = req.query;
@@ -638,7 +640,7 @@ app.get("/api/user/:id/limits", async (req, res) => {
   }
 });
 
-// ================= Update User Profile ✅ อัปเดตให้รองรับ Social Media =================
+// ================= Update User Profile =================
 app.put(
   "/api/user/:id",
   verifyToken,
@@ -649,7 +651,6 @@ app.put(
       console.log("📋 Body:", req.body);
       console.log("📷 File:", req.file);
 
-      // ตรวจสอบว่าเป็นเจ้าของ profile หรือไม่
       if (req.userId !== req.params.id) {
         return res
           .status(403)
@@ -658,7 +659,6 @@ app.put(
 
       const { username, email, bio, tiktok, instagram, facebook } = req.body;
 
-      // ✅ ข้อมูลที่จะอัพเดท (เพิ่ม Social Media)
       const updateData = {
         username,
         email,
@@ -668,13 +668,11 @@ app.put(
         facebook: facebook || "",
       };
 
-      // ถ้ามีการอัพโหลดรูปใหม่
       if (req.file) {
         updateData.avatar = `http://localhost:5000/uploads/avatars/${req.file.filename}`;
-        updateData.picture = updateData.avatar; // ให้ picture เป็นค่าเดียวกับ avatar
+        updateData.picture = updateData.avatar;
         console.log("📷 New avatar path:", updateData.avatar);
 
-        // ลบรูปเก่า (ถ้ามี)
         const oldUser = await User.findById(req.params.id);
         if (oldUser.avatar && oldUser.avatar.includes("uploads/avatars")) {
           const oldPath = path.join(
@@ -688,7 +686,6 @@ app.put(
         }
       }
 
-      // อัพเดทข้อมูล
       const updatedUser = await User.findByIdAndUpdate(
         req.params.id,
         { $set: updateData },
@@ -751,18 +748,6 @@ app.post("/api/notifications", async (req, res) => {
   }
 });
 
-// =========================
-// TAGS ดึงแท็กทั้งหมด
-// ================= Tags =================
-app.get("/api/tags", async (req, res) => {
-  try {
-    const tags = await Song.find().distinct("tags");
-    res.json(tags.filter((t) => t && t.trim() !== ""));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ================= Admin Routes =================
 app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
   try {
@@ -784,48 +769,6 @@ app.put("/api/admin/users/:id/role", verifyToken, isAdmin, async (req, res) => {
       { new: true }
     ).select("-password");
     res.json({ message: "Role updated", user });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// ================= Static Files =================
-app.use(
-  "/uploads",
-  (req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    next();
-  },
-  express.static(path.join(__dirname, "uploads"))
-);
-
-// ================= Socket.IO =================
-const server = http.createServer(app);
-
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173"],
-    credentials: true,
-  },
-});
-
-io.on("connection", (socket) => {
-  console.log("✅ Socket connected:", socket.id);
-  socket.on("disconnect", () =>
-    console.log("❌ Socket disconnected:", socket.id)
-  );
-});
-
-// ================= User Download Quota =================
-app.get("/api/users/download-quota", verifyToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const allowed =
-      user.role === "admin" || user.downloadCount < user.maxDownload;
-
-    res.json({ allowed, remaining: user.maxDownload - user.downloadCount });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -862,7 +805,6 @@ app.delete("/api/admin/users/:id", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ================= Admin Songs =================
-// Get all songs (Admin)
 app.get("/api/admin/songs", verifyToken, isAdmin, async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });
@@ -872,19 +814,17 @@ app.get("/api/admin/songs", verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// Update song (Admin)
-// ================= Admin Update Song =================
+// ✅ แก้ไข: ใช้ musicUpload แทน upload
 app.put(
   "/api/admin/songs/:id",
   verifyToken,
   isAdmin,
-  upload.single("music"), // รองรับไฟล์เพลงใหม่
+  musicUpload.single("music"),
   async (req, res) => {
     try {
       const song = await Song.findById(req.params.id);
       if (!song) return res.status(404).json({ message: "Song not found" });
 
-      // อัปเดตฟิลด์ต่างๆ
       const fields = [
         "title",
         "artist",
@@ -900,12 +840,10 @@ app.put(
 
       fields.forEach((field) => {
         if (req.body[field] !== undefined) {
-          // แปลง tags ที่ส่งเป็น JSON string กลับเป็น array
           if (field === "tags" && typeof req.body[field] === "string") {
             try {
               song[field] = JSON.parse(req.body[field]);
             } catch {
-              // ถ้าไม่ใช่ JSON, แยก comma
               song[field] = req.body[field]
                 .split(",")
                 .map((t) => t.trim())
@@ -919,7 +857,6 @@ app.put(
         }
       });
 
-      // ถ้ามีไฟล์ใหม่ ให้อัปเดต filePath และลบไฟล์เก่า
       if (req.file) {
         if (
           song.filePath &&
@@ -939,13 +876,11 @@ app.put(
   }
 );
 
-// Delete song (Admin)
 app.delete("/api/admin/songs/:id", verifyToken, isAdmin, async (req, res) => {
   try {
     const song = await Song.findById(req.params.id);
     if (!song) return res.status(404).json({ message: "Song not found" });
 
-    // ลบไฟล์เพลง
     if (song.filePath && fs.existsSync(path.join(__dirname, song.filePath))) {
       fs.unlinkSync(path.join(__dirname, song.filePath));
     }
@@ -957,7 +892,7 @@ app.delete("/api/admin/songs/:id", verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// ================= Admin: Users Growth =================
+// ================= Admin Analytics =================
 app.get(
   "/api/admin/analytics/users-growth",
   verifyToken,
@@ -977,7 +912,6 @@ app.get(
   }
 );
 
-// ================= Admin: Upload/Download =================
 app.get(
   "/api/admin/analytics/uploads-downloads",
   verifyToken,
@@ -998,7 +932,6 @@ app.get(
   }
 );
 
-// ================= Admin: Top Songs =================
 app.get(
   "/api/admin/analytics/top-songs",
   verifyToken,
@@ -1019,7 +952,16 @@ app.get(
   }
 );
 
+// ================= Static Files =================
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    next();
+  },
+  express.static(path.join(__dirname, "uploads"))
+);
+
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
