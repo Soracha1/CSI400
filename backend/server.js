@@ -198,6 +198,10 @@ const avatarUpload = multer({
  *       500:
  *         description: เกิดข้อผิดพลาด
  */
+
+
+// ================= Auth Routes =================
+
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -211,6 +215,38 @@ app.post("/api/register", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// ================= Login Routes =================
+/**
+ * @swagger
+ * /api/login:
+ *   post:
+ *     summary: เข้าสู่ระบบ
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: เข้าสู่ระบบสําเร็จ
+ *       400:
+ *         description: อีเมลหรือรหัสผ่านไม่ถูกต้อง
+ *       500:
+ *         description: เกิดข้อผิดพลาด
+ */
+
+// ================= Login Routes =================
 
 app.post("/api/login", async (req, res) => {
   try {
@@ -232,6 +268,23 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// ================= User Routes =================
+/**
+ * @swagger
+ * /auth/user:
+ *   get:
+ *     summary: ดึงข้อมูลผู้ใช้
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: ดึงข้อมูลผู้ใช้สําเร็จ
+ *       401:
+ *         description: ไม่พบข้อมูลผู้ใช้
+ *       500:
+ *         description: เกิดข้อผิดพลาด
+ */
 app.get("/auth/user", async (req, res) => {
   try {
     const token = req.headers["authorization"]?.split(" ")[1];
@@ -247,7 +300,67 @@ app.get("/auth/user", async (req, res) => {
   }
 });
 
+
+
 // ================= Google OAuth =================
+/** @swagger 
+*paths:
+  /auth/google:
+    get:
+      tags:
+        - Auth (Google OAuth)
+      summary: Login with Google
+      description: Redirect user to Google OAuth login page.
+      responses:
+        "302":
+          description: Redirect to Google OAuth login page
+
+  /auth/google/callback:
+    get:
+      tags:
+        - Auth (Google OAuth)
+      summary: Google OAuth Callback URL
+      description: Google redirects back to this URL after user grants permission.
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+          required: false
+          description: Authorization code returned from Google OAuth
+      responses:
+        "200":
+          description: OAuth Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  _id: "65a1234bcf00112233445566"
+                  username: "John Doe"
+                  email: "johndoe@gmail.com"
+                  googleId: "1122334455667788"
+                  picture: "https://example.com/photo.jpg"
+                  downloadCount: 0
+                  uploadCount: 0
+                  maxUpload: 3
+                  maxDownload: 5
+                  role: "user"
+                  lastActivity: "2024-01-01T00:00:00.000Z"
+        "302":
+          description: Redirect after successful login
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+*/
+
 app.use(
   session({
     secret: process.env.JWT_SECRET || "mySecretKey",
@@ -258,6 +371,67 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+// ================= Google OAuth =================
+/** @swagger
+paths:
+  /auth/google:
+    get:
+      tags:
+        - Auth (Google OAuth)
+      summary: Redirect to Google OAuth
+      description: Redirect users to Google for authentication.
+      responses:
+        "302":
+          description: Redirecting to Google OAuth login page.
+
+  /auth/google/callback:
+    get:
+      tags:
+        - Auth (Google OAuth)
+      summary: Google OAuth Callback
+      description: >
+        After user grants permission, Google redirects back to this URL.
+        Passport GoogleStrategy will handle user creation (if not exists) and login.
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+          required: false
+          description: Authorization code returned from Google.
+      responses:
+        "200":
+          description: Google OAuth login success
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  _id: "65a12abc9876543210ff1122"
+                  username: "John Doe"
+                  email: "johndoe@gmail.com"
+                  googleId: "11223344556677"
+                  picture: "https://example.com/photo.jpg"
+                  downloadCount: 0
+                  uploadCount: 0
+                  maxUpload: 3
+                  maxDownload: 5
+                  role: "user"
+                  lastActivity: "2025-01-01T00:00:00.000Z"
+        "302":
+          description: Redirect after successful authentication
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+*/
 passport.use(
   new GoogleStrategy(
     {
@@ -291,6 +465,8 @@ passport.use(
   )
 );
 
+
+
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) =>
   done(null, await User.findById(id))
@@ -301,6 +477,52 @@ app.get(
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
+// ================= Google OAuth Callback =================
+/** @swagger
+paths:
+  /auth/google/callback:
+    get:
+      tags:
+        - Auth (Google OAuth)
+      summary: Google OAuth Callback
+      description: >
+        Google redirects back to this URL after login.  
+        If authentication succeeds, a JWT token is generated and sent to the frontend via redirect URL.
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+          required: false
+          description: Authorization code returned by Google OAuth.
+      responses:
+        "302":
+          description: Redirect to frontend with JWT token
+          headers:
+            Location:
+              schema:
+                type: string
+                example: http://localhost:5173/?token=eyJhbGciOiJIUzI1NiIs...
+              description: Redirect URL containing JWT token.
+        "401":
+          description: Google authentication failed (failureRedirect)
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Redirecting to /
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+*/
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/" }),
@@ -318,6 +540,134 @@ app.get(
 );
 
 // ================= Song Upload =================
+/* @swagger
+paths:
+  /api/upload:
+    post:
+      tags:
+        - Music
+      summary: Upload a music file
+      description: >
+        Upload a music file with metadata.  
+        Requires JWT authentication.  
+        Users with role "user" are limited by maxUpload.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - music
+                - title
+              properties:
+                music:
+                  type: string
+                  format: binary
+                  description: Music file (audio)
+                title:
+                  type: string
+                  example: My Song
+                artist:
+                  type: string
+                  example: John Doe
+                description:
+                  type: string
+                  example: This is a sample track.
+                bpm:
+                  type: number
+                  example: 120
+                key:
+                  type: string
+                  example: C
+                mode:
+                  type: string
+                  example: Major
+                type:
+                  type: string
+                  example: HipHop
+                subtype:
+                  type: string
+                  example: BoomBap
+                soundType:
+                  type: string
+                  example: DrumLoop
+                tags:
+                  type: string
+                  description: JSON string array
+                  example: "[\"trap\", \"808\", \"dark\"]"
+      responses:
+        "200":
+          description: Upload success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Upload success
+                  song:
+                    type: object
+                    example:
+                      _id: "65a12abc9876543210ff1122"
+                      title: "My Song"
+                      artist: "John Doe"
+                      description: "Sample description"
+                      bpm: 120
+                      key: "C"
+                      mode: "Major"
+                      type: "HipHop"
+                      subtype: "BoomBap"
+                      tags: ["trap", "808", "dark"]
+                      soundType: "DrumLoop"
+                      filePath: "uploads/music/abc123.mp3"
+                      user: "65a1234fc00112233445577"
+                      createdAt: "2025-01-01T00:00:00.000Z"
+        "400":
+          description: No file uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: No file uploaded
+        "403":
+          description: Upload limit reached
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Upload limit reached
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+*/
 app.post(
   "/api/upload",
   verifyToken,
@@ -370,6 +720,166 @@ app.post(
 );
 
 // ================= Songs Routes =================
+/* @swagger
+paths:
+  /api/songs:
+    get:
+      tags:
+        - Songs
+      summary: Get all songs
+      description: Fetch all songs sorted by newest first.
+      responses:
+        "200":
+          description: List of songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  example:
+                    _id: "65a12abc9876543210ff1122"
+                    title: "My Song"
+                    artist: "John Doe"
+                    likes: 10
+                    downloads: 5
+                    createdAt: "2025-01-01T00:00:00.000Z"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+  /api/songs/top-likes:
+    get:
+      tags:
+        - Songs
+      summary: Get top 5 songs by likes
+      description: Returns songs sorted by like count (desc).
+      responses:
+        "200":
+          description: Top liked songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  example:
+                    _id: "65a12abc9876543210ff1122"
+                    title: "Popular Song"
+                    likes: 120
+                    downloads: 30
+                    createdAt: "2025-01-01T00:00:00.000Z"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+  /api/songs/top-downloads:
+    get:
+      tags:
+        - Songs
+      summary: Get top 5 songs by downloads
+      description: Returns songs sorted by download count (desc).
+      responses:
+        "200":
+          description: Top downloaded songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  example:
+                    _id: "65a12abc9876543210ff1122"
+                    title: "Hot Download"
+                    likes: 22
+                    downloads: 500
+                    createdAt: "2025-01-01T00:00:00.000Z"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+  /api/songs/{id}:
+    get:
+      tags:
+        - Songs
+      summary: Get user info from token (Based on your current code)
+      description: >
+        This endpoint currently verifies a JWT token and returns the authenticated
+        user's data, **NOT** the song data.  
+        (If you want this to return song details, tell me to fix it!)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Song ID (currently unused in code)
+      responses:
+        "200":
+          description: User data (from token)
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  _id: "65a1234abc00112233445577"
+                  username: "JohnDoe"
+                  email: "john@example.com"
+                  role: "user"
+        "401":
+          description: No token provided
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: No token
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        "500":
+          description: Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+*/
 app.get("/api/songs", async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });
@@ -415,6 +925,42 @@ app.get("/api/songs/:id", async (req, res) => {
 // =========================
 // TAGS ดึงแท็กทั้งหมด
 // ================= Tags =================
+/* @swagger
+paths:
+  /api/tags:
+    get:
+      tags:
+        - Songs
+      summary: Get unique tags from all songs
+      description: >
+        Returns a list of unique tags extracted from all songs.  
+        Empty or whitespace tags are filtered out.
+      responses:
+        "200":
+          description: List of unique tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - trap
+                  - hiphop
+                  - edm
+                  - 808
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal server error
+*/
+
 app.get("/api/tags", async (req, res) => {
   try {
     const tags = await Song.find().distinct("tags");
@@ -427,6 +973,63 @@ app.get("/api/tags", async (req, res) => {
   }
 });
 
+/* @swagger
+paths:
+  /api/songs/search:
+    get:
+      tags:
+        - Songs
+      summary: Search songs
+      description: >
+        Search songs by keyword or by tag.  
+        - **q** → search in title, artist, description, tags (regex, case-insensitive)  
+        - **tag** → filter songs by tag  
+        If both are provided, **tag overrides q** (based on your code).
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+          description: Search keyword
+          example: hiphop
+        - in: query
+          name: tag
+          required: false
+          schema:
+            type: string
+          description: Filter by exact tag
+          example: trap
+      responses:
+        "200":
+          description: List of matching songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  example:
+                    _id: "65a12abc9876543210ff1122"
+                    title: "Dark Trap Beat"
+                    artist: "ProducerX"
+                    description: "Hard trap beat with 808s."
+                    bpm: 140
+                    tags: ["trap", "808"]
+                    likes: 10
+                    downloads: 5
+                    createdAt: "2025-01-01T00:00:00.000Z"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal server error
+*/
 app.get("/api/songs/search", async (req, res) => {
   try {
     const { q, tag } = req.query;
@@ -455,6 +1058,152 @@ app.get("/api/songs/search", async (req, res) => {
 });
 
 // ================= Favorites System =================
+/* @swagger
+paths:
+  /api/songs/{id}/favorite:
+    post:
+      tags:
+        - Favorites
+      summary: Add song to user's favorites
+      description: >
+        Add a song to the authenticated user's favorites.  
+        Also increments the song's like count by 1.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Song ID
+      responses:
+        "200":
+          description: Song added to favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Added to favorites
+        "400":
+          description: Song already in favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Already in favorites
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+    delete:
+      tags:
+        - Favorites
+      summary: Remove song from user's favorites
+      description: >
+        Remove a song from the authenticated user's favorites.  
+        Also decrements the song's like count by 1.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Song ID
+      responses:
+        "200":
+          description: Song removed from favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Removed from favorites
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+  /api/user/{id}/favorites:
+    get:
+      tags:
+        - Favorites
+      summary: Get list of user's favorite songs
+      description: >
+        Returns all favorite songs of the user,  
+        populated with song owner info (username, picture).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "200":
+          description: List of favorite songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  - _id: "65a12abc9876543210ff1122"
+                    title: "Trap Beat"
+                    artist: "ProducerX"
+                    likes: 20
+                    downloads: 8
+                    user:
+                      _id: "65a111222333"
+                      username: "JohnDoe"
+                      picture: "https://example.com/p.jpg"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+*/
 app.post("/api/songs/:id/favorite", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -514,6 +1263,234 @@ app.get("/api/user/:id/favorites", verifyToken, async (req, res) => {
 });
 
 // ================= Download System =================
+/* @swagger
+paths:
+  /api/songs/{id}/download:
+    post:
+      tags:
+        - Downloads
+      summary: Record a song download
+      description: >
+        Record a download for the authenticated user.  
+        Increments song's download count and user's downloadCount.  
+        Emits a real-time notification.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Song ID
+      responses:
+        "200":
+          description: Download recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Download recorded successfully
+                  song:
+                    type: object
+                  notification:
+                    type: object
+        "403":
+          description: Download limit reached
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Download limit reached
+        "404":
+          description: User or song not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Internal server error
+
+  /api/songs/{id}/file:
+    get:
+      tags:
+        - Downloads
+      summary: Download the actual song file
+      description: >
+        Send the MP3 file for the given song.  
+        Requires authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Song ID
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Song or file not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  path:
+                    type: string
+        "500":
+          description: Server error
+
+  /api/users/download-quota:
+    get:
+      tags:
+        - Downloads
+      summary: Get current user's download quota
+      description: >
+        Returns information about the user's download quota including max downloads, current count, and remaining downloads.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Download quota info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                  current:
+                    type: integer
+                  max:
+                    type: integer
+                  remaining:
+                    type: integer
+                  role:
+                    type: string
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Server error
+
+  /api/user/{id}/downloads:
+    get:
+      tags:
+        - Downloads
+      summary: Get user's download history
+      description: >
+        Returns all downloads (type: "download") notifications for the authenticated user.  
+        User can only access their own downloads.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "200":
+          description: List of download notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Forbidden: You can only view your own downloads.
+        "500":
+          description: Server error
+
+  /api/songs/{id}/check:
+    get:
+      tags:
+        - Downloads
+      summary: Check if song file exists
+      description: >
+        Check whether a song exists in DB and if the file exists on server.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Song ID
+      responses:
+        "200":
+          description: File existence info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exists:
+                    type: boolean
+                  song:
+                    type: string
+                  filePath:
+                    type: string
+                  fullPath:
+                    type: string
+                  message:
+                    type: string
+        "500":
+          description: Server error
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+*/
 app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -649,6 +1626,123 @@ app.get("/api/songs/:id/check", verifyToken, async (req, res) => {
 });
 
 // ================= User Routes =================
+/* @swagger
+paths:
+  /api/user/{id}/uploads:
+    get:
+      tags:
+        - User
+      summary: Get all uploads by a user
+      description: Retrieve all songs uploaded by a specific user, sorted by creation date descending.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "200":
+          description: List of user's uploaded songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    title:
+                      type: string
+                    artist:
+                      type: string
+                    description:
+                      type: string
+                    bpm:
+                      type: number
+                    key:
+                      type: string
+                    mode:
+                      type: string
+                    type:
+                      type: string
+                    subtype:
+                      type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    soundType:
+                      type: string
+                    filePath:
+                      type: string
+                    user:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/user/{id}/limits:
+    get:
+      tags:
+        - User
+      summary: Get user's upload/download limits
+      description: Retrieve the current upload/download count and max limits of a specific user.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "200":
+          description: User limits info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uploadCount:
+                    type: integer
+                  downloadCount:
+                    type: integer
+                  maxUpload:
+                    type: integer
+                  maxDownload:
+                    type: integer
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+*/
 app.get("/api/user/:id/uploads", async (req, res) => {
   try {
     const songs = await Song.find({ user: req.params.id }).sort({
@@ -673,6 +1767,121 @@ app.get("/api/user/:id/limits", async (req, res) => {
 });
 
 // ================= Update User Profile ✅ อัปเดตให้รองรับ Social Media =================
+/* @swagger
+paths:
+  /api/user/{id}:
+    put:
+      tags:
+        - User
+      summary: Update user profile
+      description: Update user profile information including username, email, bio, social media links, and avatar.
+      security:
+        - bearerAuth: []   # ใช้ JWT token
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID to update
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                bio:
+                  type: string
+                tiktok:
+                  type: string
+                  description: TikTok profile URL
+                instagram:
+                  type: string
+                  description: Instagram profile URL
+                facebook:
+                  type: string
+                  description: Facebook profile URL
+                avatar:
+                  type: string
+                  format: binary
+                  description: New avatar image file
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                      username:
+                        type: string
+                      email:
+                        type: string
+                      bio:
+                        type: string
+                      tiktok:
+                        type: string
+                      instagram:
+                        type: string
+                      facebook:
+                        type: string
+                      avatar:
+                        type: string
+                        format: uri
+                      picture:
+                        type: string
+                        format: uri
+        "403":
+          description: Forbidden – user cannot update another user's profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  error:
+                    type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+*/
 app.put(
   "/api/user/:id",
   verifyToken,
@@ -755,6 +1964,120 @@ app.put(
 );
 
 // ================= Notifications =================
+/* @swagger
+paths:
+  /api/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Get latest notifications
+      description: Retrieve the latest 20 notifications, sorted by creation date.
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    type:
+                      type: string
+                    message:
+                      type: string
+                    user:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        username:
+                          type: string
+                        picture:
+                          type: string
+                    song:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        title:
+                          type: string
+                        artist:
+                          type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+    post:
+      tags:
+        - Notifications
+      summary: Create a new notification
+      description: Create a new notification and broadcast it via WebSocket (Socket.io).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - message
+                - userId
+              properties:
+                type:
+                  type: string
+                  description: Type of notification (e.g., upload, download)
+                message:
+                  type: string
+                  description: Notification message
+                userId:
+                  type: string
+                  description: ID of the user who triggered the notification
+                songId:
+                  type: string
+                  description: (Optional) Associated song ID
+      responses:
+        "200":
+          description: Notification created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  type:
+                    type: string
+                  message:
+                    type: string
+                  user:
+                    type: string
+                  song:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+*/
 app.get("/api/notifications", async (req, res) => {
   try {
     const notifications = await Notification.find()
@@ -788,6 +2111,33 @@ app.post("/api/notifications", async (req, res) => {
 // =========================
 // TAGS ดึงแท็กทั้งหมด
 // ================= Tags =================
+/* @swagger
+paths:
+  /api/tags:
+    get:
+      tags:
+        - Tags
+      summary: Get all tags
+      description: Retrieve all unique tags from songs. Empty or whitespace-only tags are filtered out.
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+*/
 app.get("/api/tags", async (req, res) => {
   try {
     const tags = await Song.find().distinct("tags");
@@ -798,6 +2148,110 @@ app.get("/api/tags", async (req, res) => {
 });
 
 // ================= Admin Routes =================
+/* @swagger
+paths:
+  /api/admin/users:
+    get:
+      tags:
+        - Admin
+      summary: Get all users
+      description: Retrieve all users (passwords excluded). Requires admin privileges.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    username:
+                      type: string
+                    email:
+                      type: string
+                    role:
+                      type: string
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (not admin)
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/admin/users/{id}/role:
+    put:
+      tags:
+        - Admin
+      summary: Update user role
+      description: Update the role of a user (user/admin). Requires admin privileges.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [user, admin]
+      responses:
+        "200":
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                      username:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+        "400":
+          description: Invalid role
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (not admin)
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+*/
 app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -824,6 +2278,43 @@ app.put("/api/admin/users/:id/role", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ================= Static Files =================
+/* @swagger
+paths:
+  /uploads/{filename}:
+    get:
+      tags:
+        - Uploads
+      summary: Access uploaded files
+      description: >
+        Serve static files from the `uploads` directory.
+        CORS is enabled, so any origin can access files.
+      parameters:
+        - name: filename
+          in: path
+          description: Name of the uploaded file
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File served successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+*/
 app.use(
   "/uploads",
   (req, res, next) => {
@@ -834,6 +2325,49 @@ app.use(
 );
 
 // ================= Socket.IO =================
+/*@swagger
+components:
+  schemas:
+    SocketEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type of event
+        payload:
+          type: object
+          description: Event data
+
+paths:
+  /socket.io:
+    get:
+      summary: WebSocket / Socket.IO connection
+      description: |
+        Clients connect to this endpoint via Socket.IO.
+        CORS allows connections from:
+          - http://localhost:3000
+          - http://localhost:5173
+      responses:
+        "101":
+          description: Switching Protocols (WebSocket handshake)
+  
+webhooks:
+  socketEvents:
+    summary: Real-time Socket.IO events
+    description: |
+      Events emitted from server via Socket.IO:
+        - "connection": Fired when a new client connects. Payload includes `socket.id`.
+        - "disconnect": Fired when a client disconnects. Payload includes `socket.id`.
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocketEvent'
+      responses:
+        '200':
+          description: Event received successfully
+*/
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -851,6 +2385,69 @@ io.on("connection", (socket) => {
 });
 
 // ================= User Download Quota =================
+/* @swagger
+paths:
+  /api/users/download-quota:
+    get:
+      summary: Get current user's download quota
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User quota
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                  remaining:
+                    type: integer
+        '404':
+          description: User not found
+
+  /api/admin/users/{id}/reset-quota:
+    put:
+      summary: Reset a user's upload/download quota (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quota reset
+        '404':
+          description: User not found
+
+  /api/admin/users/{id}:
+    delete:
+      summary: Delete a user (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted
+        '404':
+          description: User not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+*/
 app.get("/api/users/download-quota", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -896,6 +2493,69 @@ app.delete("/api/admin/users/:id", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ================= Admin Songs =================
+/* @swagger
+paths:
+  /api/admin/songs:
+    get:
+      summary: Get all songs (Admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of all songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Song'
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Song:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        description:
+          type: string
+        bpm:
+          type: integer
+        key:
+          type: string
+        mode:
+          type: string
+        type:
+          type: string
+        subtype:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        soundType:
+          type: string
+        filePath:
+          type: string
+        user:
+          type: string
+        likes:
+          type: integer
+        downloads:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+*/
 // Get all songs (Admin)
 app.get("/api/admin/songs", verifyToken, isAdmin, async (req, res) => {
   try {
@@ -909,6 +2569,166 @@ app.get("/api/admin/songs", verifyToken, isAdmin, async (req, res) => {
 // Update song (Admin)
 // ================= Admin Update Song =================
 // ================= Admin Update Song =================
+/* @swagger
+openapi: 3.0.3
+info:
+  title: Music App Admin API
+  version: 1.0.0
+  description: API สำหรับจัดการเพลงโดย Admin
+
+servers:
+  - url: http://localhost:5000
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Song:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        description:
+          type: string
+        bpm:
+          type: integer
+        key:
+          type: string
+        mode:
+          type: string
+        type:
+          type: string
+        subtype:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        soundType:
+          type: string
+        filePath:
+          type: string
+        likes:
+          type: integer
+        downloads:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/admin/songs:
+    get:
+      summary: ดึงเพลงทั้งหมด (Admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการเพลงทั้งหมด
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Song'
+        '500':
+          description: Internal server error
+
+  /api/admin/songs/{id}:
+    put:
+      summary: อัปเดตเพลง (Admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                artist:
+                  type: string
+                description:
+                  type: string
+                bpm:
+                  type: integer
+                key:
+                  type: string
+                mode:
+                  type: string
+                type:
+                  type: string
+                subtype:
+                  type: string
+                tags:
+                  type: string
+                  description: JSON string หรือ comma-separated
+                soundType:
+                  type: string
+                music:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: เพลงถูกอัปเดต
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  song:
+                    $ref: '#/components/schemas/Song'
+        '404':
+          description: Song not found
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: ลบเพลง (Admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: เพลงถูกลบเรียบร้อย
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Song not found
+        '500':
+          description: Internal server error
+*/
 app.put(
   "/api/admin/songs/:id",
   verifyToken,
@@ -992,6 +2812,55 @@ app.delete("/api/admin/songs/:id", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ================= Admin: Users Growth =================
+/* @swagger
+openapi: 3.0.3
+info:
+  title: Music App Admin API
+  version: 1.0.0
+  description: API สำหรับ Admin Analytics
+
+servers:
+  - url: http://localhost:5000
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UsersGrowth:
+      type: object
+      properties:
+        date:
+          type: string
+          description: วันที่สร้างผู้ใช้ (YYYY-MM-DD)
+        totalUsers:
+          type: integer
+          description: จำนวนผู้ใช้สะสมจนถึงวันนั้น
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/admin/analytics/users-growth:
+    get:
+      summary: ข้อมูลการเติบโตของผู้ใช้ (Admin)
+      description: ดึงข้อมูลจำนวนผู้ใช้สะสมตามวันสำหรับกราฟ Analytics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการผู้ใช้สะสมตามวัน
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UsersGrowth'
+        '500':
+          description: Internal server error
+*/
 app.get(
   "/api/admin/analytics/users-growth",
   verifyToken,
@@ -1012,6 +2881,58 @@ app.get(
 );
 
 // ================= Admin: Upload/Download =================
+/* @swagger
+openapi: 3.0.3
+info:
+  title: Music App Admin API
+  version: 1.0.0
+  description: API สำหรับ Admin Analytics
+
+servers:
+  - url: http://localhost:5000
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UploadsDownloads:
+      type: object
+      properties:
+        username:
+          type: string
+          description: ชื่อผู้ใช้
+        uploads:
+          type: integer
+          description: จำนวนเพลงที่ผู้ใช้อัปโหลด
+        downloads:
+          type: integer
+          description: จำนวนดาวน์โหลดของผู้ใช้
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/admin/analytics/uploads-downloads:
+    get:
+      summary: ข้อมูลการอัปโหลดและดาวน์โหลดของผู้ใช้ (Admin)
+      description: ดึงข้อมูลจำนวนการอัปโหลดและดาวน์โหลดของแต่ละผู้ใช้
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการผู้ใช้พร้อมจำนวนอัปโหลดและดาวน์โหลด
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UploadsDownloads'
+        '500':
+          description: Internal server error
+*/
 app.get(
   "/api/admin/analytics/uploads-downloads",
   verifyToken,
@@ -1033,6 +2954,220 @@ app.get(
 );
 
 // ================= Admin: Top Songs =================
+/* @swagger
+openapi: 3.0.3
+info:
+  title: Music App API
+  version: 1.0.0
+  description: API สำหรับผู้ใช้และ Admin ของ Music App
+
+servers:
+  - url: http://localhost:5000
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UploadsDownloads:
+      type: object
+      properties:
+        username:
+          type: string
+        uploads:
+          type: integer
+        downloads:
+          type: integer
+
+    UserGrowth:
+      type: object
+      properties:
+        date:
+          type: string
+        totalUsers:
+          type: integer
+
+    TopSong:
+      type: object
+      properties:
+        title:
+          type: string
+        downloads:
+          type: integer
+        likes:
+          type: integer
+
+    RedeemCode:
+      type: object
+      properties:
+        code:
+          type: string
+        plan:
+          type: string
+        used:
+          type: boolean
+        usedBy:
+          type: object
+          nullable: true
+          properties:
+            username:
+              type: string
+            email:
+              type: string
+
+    UserPlan:
+      type: object
+      properties:
+        plan:
+          type: string
+        expire:
+          type: string
+          format: date-time
+        remainingDays:
+          type: integer
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/admin/analytics/uploads-downloads:
+    get:
+      summary: ข้อมูลการอัปโหลดและดาวน์โหลดของผู้ใช้ (Admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการผู้ใช้พร้อมจำนวนอัปโหลดและดาวน์โหลด
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UploadsDownloads'
+
+  /api/admin/analytics/users-growth:
+    get:
+      summary: การเติบโตของผู้ใช้ตามวัน (Admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการผู้ใช้ตามวันสร้าง
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserGrowth'
+
+  /api/admin/analytics/top-songs:
+    get:
+      summary: ดึงเพลงยอดนิยมตามจำนวนดาวน์โหลด (Admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการเพลงยอดนิยม 5 เพลง
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopSong'
+
+  /api/admin/gencode:
+    post:
+      summary: สร้าง Redeem Code ใหม่ (Admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plan:
+                  type: string
+                  description: ชื่อแพลน เช่น SOCOZY, SUPERCOZY, COZIEST
+      responses:
+        '200':
+          description: Redeem Code ที่สร้างสำเร็จ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  code:
+                    type: string
+
+  /api/redeem:
+    post:
+      summary: ใช้ Redeem Code สำหรับผู้ใช้
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: ผลลัพธ์การ Redeem
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/user/{id}/code:
+    get:
+      summary: ดูแผนปัจจุบันและวันหมดอายุของผู้ใช้
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: ข้อมูลแผนผู้ใช้
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPlan'
+        '403':
+          description: Forbidden
+        '404':
+          description: User not found
+
+  /api/admin/codes:
+    get:
+      summary: ดึงรายการ Redeem Codes ทั้งหมด (Admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: รายการ Redeem Codes พร้อมผู้ใช้ที่ใช้
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RedeemCode'
+*/
 app.get(
   "/api/admin/analytics/top-songs",
   verifyToken,
@@ -1153,6 +3288,15 @@ app.get("/api/admin/codes", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ================= Start Server =================
+/**
+ * @swagger
+ * /hello:
+ *   get:
+ *     summary: Returns Hello World
+ *     responses:
+ *       200:
+ *         description: Successful response
+ */
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 console.log("Swagger docs: http://localhost:5000/api-docs");
