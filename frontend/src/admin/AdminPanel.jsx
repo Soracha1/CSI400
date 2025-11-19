@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
+import "./AdminPanel.css"; // ✅ ใช้ CSS ปกติ
 
 export default function Adminpanel() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
-  const token = localStorage.getItem("token"); // สมมติ JWT เก็บใน localStorage
+  const token = localStorage.getItem("token");
 
-  const API_BASE = "http://localhost:5000"; // ชี้ไป backend
+  const API_BASE = "http://localhost:5000";
 
   // ================= Fetch Users =================
   const fetchUsers = async () => {
@@ -14,11 +16,9 @@ export default function Adminpanel() {
       const res = await axios.get(`${API_BASE}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Users fetched:", res.data);
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Failed to fetch users:", err);
-      alert("Failed to fetch users");
+      Swal.fire("Error", "Failed to fetch users", "error");
     }
   };
 
@@ -34,10 +34,18 @@ export default function Adminpanel() {
         { role },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      Swal.fire({
+        icon: "success",
+        title: "Role Updated",
+        text: `User role changed to ${role}`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
       fetchUsers();
     } catch (err) {
-      console.error("Failed to update role:", err);
-      alert("Failed to update role");
+      Swal.fire("Error", "Failed to update role", "error");
     }
   };
 
@@ -49,24 +57,51 @@ export default function Adminpanel() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      Swal.fire({
+        icon: "success",
+        title: "Quota Reset",
+        text: "User quota has been reset",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
       fetchUsers();
     } catch (err) {
-      console.error("Failed to reset quota:", err);
-      alert("Failed to reset quota");
+      Swal.fire("Error", "Failed to reset quota", "error");
     }
   };
 
   // ================= Delete User =================
   const handleDelete = async (userId) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    const confirm = await Swal.fire({
+      title: "Are you sure?",
+      text: "This user will be permanently deleted!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#e3342f",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirm.isConfirmed) return;
+
     try {
       await axios.delete(`${API_BASE}/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        text: "User has been deleted",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
       fetchUsers();
     } catch (err) {
-      console.error("Failed to delete user:", err);
-      alert("Failed to delete user");
+      Swal.fire("Error", "Failed to delete user", "error");
     }
   };
 
@@ -80,33 +115,34 @@ export default function Adminpanel() {
     : [];
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Users Management</h2>
+    <div className="adminpanel-container">
+      <h2 className="adminpanel-title">Users Management</h2>
 
       <input
         type="text"
         placeholder="Search by name or email"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="border p-2 mb-4 rounded w-full max-w-sm"
+        className="adminpanel-search-box"
       />
 
-      <table className="min-w-full border bg-white rounded shadow">
+      <table className="adminpanel-table">
         <thead>
-          <tr className="bg-gray-200 text-left">
-            <th className="p-2 border">Username</th>
-            <th className="p-2 border">Email</th>
-            <th className="p-2 border">Role</th>
-            <th className="p-2 border">Upload/Download</th>
-            <th className="p-2 border">Actions</th>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Upload / Download</th>
+            <th>Actions</th>
           </tr>
         </thead>
+
         <tbody>
           {filteredUsers.map((u) => (
-            <tr key={u._id} className="border-b">
-              <td className="p-2">{u.username}</td>
-              <td className="p-2">{u.email}</td>
-              <td className="p-2">
+            <tr key={u._id}>
+              <td>{u.username}</td>
+              <td>{u.email}</td>
+              <td>
                 {u.role}{" "}
                 <button
                   onClick={() =>
@@ -115,34 +151,36 @@ export default function Adminpanel() {
                       u.role === "admin" ? "user" : "admin"
                     )
                   }
-                  className="ml-2 bg-blue-500 text-white px-2 py-1 rounded text-sm"
+                  className="adminpanel-btn adminpanel-btn-role"
                 >
                   Make {u.role === "admin" ? "User" : "Admin"}
                 </button>
               </td>
-              <td className="p-2">
-                {u.uploadCount}/{u.maxUpload} / {u.downloadCount}/
-                {u.maxDownload}{" "}
+
+              <td>
+                {u.uploadCount}/{u.maxUpload} — {u.downloadCount}/{u.maxDownload}{" "}
                 <button
                   onClick={() => handleResetQuota(u._id)}
-                  className="ml-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm"
+                  className="adminpanel-btn adminpanel-btn-reset"
                 >
                   Reset Quota
                 </button>
               </td>
-              <td className="p-2">
+
+              <td>
                 <button
                   onClick={() => handleDelete(u._id)}
-                  className="bg-red-500 text-white px-2 py-1 rounded text-sm"
+                  className="adminpanel-btn adminpanel-btn-delete"
                 >
                   Delete
                 </button>
               </td>
             </tr>
           ))}
+
           {filteredUsers.length === 0 && (
             <tr>
-              <td colSpan="5" className="text-center p-4">
+              <td colSpan="5" className="adminpanel-no-user">
                 No users found
               </td>
             </tr>

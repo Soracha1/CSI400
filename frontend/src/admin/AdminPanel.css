@@ -1,0 +1,125 @@
+/* ================= Adminpanel Container ================= */
+.adminpanel-container {
+    padding-top: 125px; 
+    padding-bottom: 40px; 
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: calc(100vh - 80px); 
+    color: black; /* ข้อความสีดำ */
+}
+
+/* --- กล่องใหญ่ครอบข้อมูล --- */
+.adminpanel-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  margin-bottom: 30px;
+  color: black; /* ข้อความสีดำ */
+}
+
+/* --- ชื่อหัวข้อ --- */
+.adminpanel-title {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+  color: rgb(253, 253, 253);
+}
+
+/* --- Search Box --- */
+.adminpanel-search-box {
+  width: 100%;
+  max-width: 350px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-bottom: 20px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  color: rgb(255, 255, 255); /* ตัวอักษรใน input */
+}
+
+/* --- Table --- */
+.adminpanel-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: black; /* ตัวอักษรใน table */
+}
+
+.adminpanel-table th {
+  background: #0092ff;
+  padding: 12px;
+  color: black; /* เปลี่ยนจาก white เป็น black */
+  text-align: center;
+}
+
+.adminpanel-table td {
+  padding: 12px;
+  background: #f8faff;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  color: black; /* ตัวอักษรใน td */
+}
+
+.adminpanel-table tr:nth-child(even) td {
+  background: #eef6ff;
+}
+
+/* --- Buttons --- */
+.adminpanel-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  margin: 2px;
+  transition: all 0.3s ease;
+}
+
+.adminpanel-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.adminpanel-btn-role {
+  background: #007bff;
+  color: white; /* ปุ่มยังคงสีเดิม */
+}
+
+.adminpanel-btn-reset {
+  background: #ffc107;
+  color: black;
+}
+
+.adminpanel-btn-delete {
+  background: #ff3b30;
+  color: white;
+}
+
+/* --- No users found --- */
+.adminpanel-no-user {
+  padding: 40px 20px;
+  text-align: center;
+  color: black; /* เปลี่ยนเป็นสีดำ */
+  font-size: 16px;
+}
+
+/* --- Footer stays at bottom --- */
+.adminpanel-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: black;
+}
+
+.adminpanel-footer {
+  margin-top: auto;
+  color: black;
+}

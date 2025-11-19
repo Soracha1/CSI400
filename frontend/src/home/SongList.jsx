@@ -171,48 +171,35 @@ function SongList({ searchTerm }) {
     }
   };
 
-  const togglePlay = (id) => {
+const togglePlay = (id) => {
   const audio = audioRefs.current[id];
   if (!audio) return;
 
   // หยุดเพลงก่อนหน้า
   if (currentPlaying && currentPlaying !== id) {
     const prevAudio = audioRefs.current[currentPlaying];
-    if (prevAudio) {
-      prevAudio.pause();
-      prevAudio.currentTime = 0;
-      setCurrentTimes((prev) => ({ ...prev, [currentPlaying]: 0 }));
-      clearInterval(audioIntervals.current[currentPlaying]);
-    }
+    if (prevAudio) prevAudio.pause();
   }
 
   if (audio.paused) {
     audio.play();
     setCurrentPlaying(id);
 
-    // ontimeupdate
     audio.ontimeupdate = () => {
       setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
     };
 
-    // setInterval backup
-    audioIntervals.current[id] = setInterval(() => {
-      setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
-    }, 200);
-
     audio.onended = () => {
-      clearInterval(audioIntervals.current[id]);
       setCurrentPlaying(null);
       setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
     };
   } else {
     audio.pause();
-    audio.currentTime = 0;
-    clearInterval(audioIntervals.current[id]);
     setCurrentPlaying(null);
-    setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
+    // currentTime ไม่ต้องรีเซ็ต
   }
 };
+
 
 
   const formatTime = (seconds) => {
@@ -364,10 +351,10 @@ function SongList({ searchTerm }) {
       <h2 className="songlist-title">
         🎵{" "}
         {filterTag
-          ? `เพลงในหมวด "${filterTag}"`
-          : searchTerm
-          ? "เพลงที่ค้นหา"
-          : "เพลงทั้งหมด"}
+          ? `Songs in category "${filterTag}"`
+  : searchTerm
+    ? "Searched songs"
+    : "All songs"}
       </h2>
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
 
@@ -385,7 +372,7 @@ function SongList({ searchTerm }) {
 
       {filterTag && (
         <button className="clear-filter" onClick={() => setFilterTag(null)}>
-          ❌ ล้างตัวกรอง
+          ❌ delete filter
         </button>
       )}
     </div>
