@@ -24,6 +24,8 @@ function SongList({ searchTerm }) {
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  const audioRefs = useRef({});
+
   useEffect(() => {
     loadAllData();
     loadFavorites();
@@ -32,6 +34,22 @@ function SongList({ searchTerm }) {
   useEffect(() => {
     setCurrentPage(0);
   }, [searchTerm, filterTag]);
+
+  useEffect(() => {
+    // Cleanup audio intervals on unmount
+  return () => {
+  Object.values(audioIntervals.current).forEach((interval) => {
+    clearInterval(interval);
+  });
+  Object.values(audioRefs.current).forEach((audio) => {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  });
+};
+
+  }, []);
 
   const loadAllData = async () => {
     try {
@@ -76,7 +94,6 @@ function SongList({ searchTerm }) {
     }
     try {
       const isFav = favorites.includes(id);
-
       if (isFav) {
         await axios.delete(`${BASE_URL}/api/songs/${id}/favorite`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -154,47 +171,49 @@ function SongList({ searchTerm }) {
     }
   };
 
-  const togglePlay = (id) => {
-    const audio = document.getElementById(`audio-${id}`);
-    if (!audio) return;
+const togglePlay = (id) => {
+  const audio = audioRefs.current[id];
+  if (!audio) return;
 
-    // pause previous
-    if (currentPlaying && currentPlaying !== id) {
-      const prevAudio = document.getElementById(`audio-${currentPlaying}`);
-      if (prevAudio) {
-        prevAudio.pause();
-        prevAudio.currentTime = 0;
-        clearInterval(audioIntervals.current[currentPlaying]);
-      }
-    }
+  // หยุดเพลงก่อนหน้า
+  if (currentPlaying && currentPlaying !== id) {
+    const prevAudio = audioRefs.current[currentPlaying];
+    if (prevAudio) prevAudio.pause();
+  }
 
-    if (audio.paused) {
-      audio.play();
-      setCurrentPlaying(id);
+  if (audio.paused) {
+    audio.play();
+    setCurrentPlaying(id);
 
-      audioIntervals.current[id] = setInterval(() => {
-        setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
-      }, 200);
+    audio.ontimeupdate = () => {
+      setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
+    };
 
-      audio.onended = () => {
-        clearInterval(audioIntervals.current[id]);
-        setCurrentPlaying(null);
-        setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
-      };
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
-      clearInterval(audioIntervals.current[id]);
+    audio.onended = () => {
       setCurrentPlaying(null);
       setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
-    }
-  };
+    };
+  } else {
+    audio.pause();
+    setCurrentPlaying(null);
+    // currentTime ไม่ต้องรีเซ็ต
+  }
+};
+
+
 
   const formatTime = (seconds) => {
     if (!seconds) return "0:00";
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const getProgressPercentage = (songId) => {
+    const duration = durations[songId] || 0;
+    const currentTime = currentTimes[songId] || 0;
+    if (duration === 0) return 0;
+    return Math.min((currentTime / duration) * 100, 100);
   };
 
   const normalize = (text) => text?.toString().trim().toLowerCase() || "";
@@ -242,6 +261,15 @@ function SongList({ searchTerm }) {
       </div>
 
       <div className="song-info">
+        <div
+          className={`wave-anim ${currentPlaying === song._id ? "active" : ""}`}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
         <h3>{song.title}</h3>
         <p>{song.artist}</p>
       </div>
@@ -293,21 +321,19 @@ function SongList({ searchTerm }) {
       <div className="song-progress">
         <div
           className="progress-fill"
-          style={{
-            width: durations[song._id]
-              ? `${(currentTimes[song._id] / durations[song._id]) * 100}%`
-              : "0%",
-          }}
+          style={{ width: `${getProgressPercentage(song._id)}%` }}
         ></div>
       </div>
 
-      <audio
-        id={`audio-${song._id}`}
-        src={`${BASE_URL}/${song.filePath}`}
-        onLoadedMetadata={(e) =>
-          setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
-        }
-      />
+   <audio
+  ref={(el) => (audioRefs.current[song._id] = el)}
+  id={`audio-${song._id}`}
+  src={`${BASE_URL}/${song.filePath}`}
+  onLoadedMetadata={(e) =>
+    setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
+  }
+/>
+
     </div>
   );
 
@@ -325,10 +351,10 @@ function SongList({ searchTerm }) {
       <h2 className="songlist-title">
         🎵{" "}
         {filterTag
-          ? `เพลงในหมวด "${filterTag}"`
-          : searchTerm
-          ? "เพลงที่ค้นหา"
-          : "เพลงทั้งหมด"}
+          ? `Songs in category "${filterTag}"`
+  : searchTerm
+    ? "Searched songs"
+    : "All songs"}
       </h2>
       <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
 
@@ -346,7 +372,7 @@ function SongList({ searchTerm }) {
 
       {filterTag && (
         <button className="clear-filter" onClick={() => setFilterTag(null)}>
-          ❌ ล้างตัวกรอง
+          ❌ delete filter
         </button>
       )}
     </div>

@@ -52,7 +52,9 @@ function App() {
   return (
     <Router>
       <Navbar setSearchTerm={setSearchTerm} />
+
       <Routes>
+        {/* Home */}
         <Route
           path="/"
           element={
@@ -67,19 +69,35 @@ function App() {
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
         <Route path="/admin/generate-codes" element={<AdminGenCode />} />
         <Route path="/analytics" element={<UserAnalytics />} />
+
+        {/* Auth */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Rigister />} />
+
+        {/* User */}
         <Route path="/dashboard" element={<SongList />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:id" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/upload" element={<UploadSong />} />
         <Route path="/premium" element={<Primium />} />
         <Route path="/song/:id" element={<SongDetail />} />
+
+        {/* Help */}
+        <Route path="/help" element={<Help />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/qa" element={<QandA />} />
-        <Route path="/help" element={<Help />} />
+
+        {/* Admin */}
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/songs" element={<AdminSongs />} />
+        <Route path="/admin/analytics" element={<AdminAnalytics />} />
+
+        {/* Analytics */}
+        <Route path="/analytics" element={<UserAnalytics />} />
       </Routes>
+
       <Footer />
     </Router>
   );

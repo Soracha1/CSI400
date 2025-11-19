@@ -1,0 +1,68 @@
+/* ================= Container ================= */
+.admin-analytics-container {
+    padding: 8rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: Arial, sans-serif;
+    color: #ffffff; /* ตัวหนังสือสีดำ */
+}
+
+/* ================= Main Title ================= */
+.admin-analytics-main-title {
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+/* ================= Section Titles ================= */
+.admin-analytics-section h3 {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: #333;
+    text-align: center; /* หัวข้อแต่ละ section อยู่ตรงกลาง */
+}
+
+/* ================= Sections ================= */
+.admin-analytics-section {
+    margin: 2rem 0;
+    background: #f9f9f9;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* กราฟอยู่ตรงกลาง */
+}
+
+/* ================= Charts ================= */
+.admin-analytics-section svg {
+    display: block;
+    margin: 0 auto;
+}
+
+/* ================= Tooltips ================= */
+.recharts-tooltip-wrapper {
+    font-size: 14px;
+    color: #000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ================= Legend ================= */
+.recharts-legend-wrapper {
+    font-size: 14px;
+    color: #000;
+}
+
+/* ================= Responsive ================= */
+@media (max-width: 768px) {
+    .admin-analytics-section svg {
+        width: 100% !important;
+        height: auto !important;
+    }
+}

@@ -13,6 +13,7 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
+import "./UserAnalytics.css";
 
 function UserAnalytics() {
   const token = localStorage.getItem("token");
@@ -32,8 +33,7 @@ function UserAnalytics() {
         const userRes = await axios.get("http://localhost:5000/auth/user", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const user = userRes.data;
-        setLimits(user);
+        setLimits(userRes.data);
 
         // เพลงที่ดาวน์โหลด / ถูกใจมากที่สุด
         const songsRes = await axios.get(
@@ -52,18 +52,16 @@ function UserAnalytics() {
     fetchData();
   }, [token]);
 
-  // เตรียมข้อมูล Bar Chart ของตัวเอง
   const barData = [
     { type: "Uploads", count: limits.uploadCount },
     { type: "Downloads", count: limits.downloadCount },
   ];
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
-      <h2 style={{ marginBottom: "1.5rem" }}>📊 Your Dashboard</h2>
+    <div className="user-analytics-container">
+      <h2 className="user-analytics-header">📊 Your Dashboard</h2>
 
-      {/* Upload / Download ของตัวเอง */}
-      <section style={{ marginBottom: "3rem" }}>
+      <section className="user-analytics-section">
         <h3>Your Uploads / Downloads</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={barData}>
@@ -81,8 +79,7 @@ function UserAnalytics() {
         </p>
       </section>
 
-      {/* Top Songs */}
-      <section style={{ marginBottom: "3rem" }}>
+      <section className="user-analytics-section">
         <h3>Top Songs in Platform</h3>
         <ResponsiveContainer width="100%" height={400}>
           <PieChart>

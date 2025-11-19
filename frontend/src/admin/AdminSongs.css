@@ -6,6 +6,52 @@
   min-height: 100vh;
 }
 
+/* ตารางพื้นฐาน */
+.admin-table {
+  width: 90%;
+  margin: 30px auto;
+  border-collapse: collapse;
+  background: #f9f9ff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
+/* หัวตาราง */
+.admin-table thead {
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
+  color: white;
+  font-weight: bold;
+}
+
+.admin-table th {
+  padding: 14px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* แถวข้อมูล */
+.admin-table td {
+  padding: 12px;
+  font-size: 0.85rem;
+  color: #333;
+  text-align: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* เส้นคั่นแถว */
+.admin-table tr:nth-child(even) td {
+  background: #eef2ff;
+}
+
+/* Hover แถว */
+.admin-table tr:hover td {
+  background: #d8e6ff;
+  transition: 0.2s;
+}
+
+
 .song-grid {
   display: flex;
   flex-wrap: wrap;
@@ -68,4 +114,6 @@
   color: white;
   font-weight: 500;
   border-radius: 18px;
-  padding:
+  padding: 4px 10px;
+}
+ 

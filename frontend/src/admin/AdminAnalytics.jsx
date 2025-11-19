@@ -1,19 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar, PieChart, Pie, Cell
 } from "recharts";
+
+import './AdminAnalytics.css';
 
 function AdminAnalytics() {
   const token = localStorage.getItem("token");
@@ -26,21 +18,18 @@ function AdminAnalytics() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Users growth
         const usersRes = await axios.get(
           "http://localhost:5000/api/admin/analytics/users-growth",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setUsersGrowth(usersRes.data);
 
-        // Uploads / Downloads
         const udRes = await axios.get(
           "http://localhost:5000/api/admin/analytics/uploads-downloads",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setUploadsDownloads(udRes.data);
 
-        // Top Songs
         const topSongsRes = await axios.get(
           "http://localhost:5000/api/admin/analytics/top-songs",
           { headers: { Authorization: `Bearer ${token}` } }
@@ -56,10 +45,15 @@ function AdminAnalytics() {
   }, [token]);
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>📊 Admin Analytics Dashboard</h2>
+    <div className="admin-analytics-container">
+      
+      
 
-      <section style={{ margin: "2rem 0" }}>
+      {/* ================= Main Title ================= */}
+      <h2 className="admin-analytics-main-title">📊 Admin Analytics Dashboard</h2>
+
+      {/* ================= Users Growth ================= */}
+      <section className="admin-analytics-section">
         <h3>Users Growth</h3>
         <LineChart width={700} height={300} data={usersGrowth}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -71,7 +65,8 @@ function AdminAnalytics() {
         </LineChart>
       </section>
 
-      <section style={{ margin: "2rem 0" }}>
+      {/* ================= Uploads / Downloads ================= */}
+      <section className="admin-analytics-section">
         <h3>Uploads / Downloads</h3>
         <BarChart width={700} height={300} data={uploadsDownloads}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -84,7 +79,8 @@ function AdminAnalytics() {
         </BarChart>
       </section>
 
-      <section style={{ margin: "2rem 0" }}>
+      {/* ================= Top Songs ================= */}
+      <section className="admin-analytics-section">
         <h3>Top Songs</h3>
         <PieChart width={400} height={400}>
           <Pie
@@ -97,10 +93,7 @@ function AdminAnalytics() {
             label
           >
             {topSongs.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip />
