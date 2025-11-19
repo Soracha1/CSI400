@@ -18,6 +18,9 @@ function Navbar() {
   const [showSlider, setShowSlider] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // NEW: Admin menu dropdown
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
+
   const socketRef = useRef(null);
   const userIdRef = useRef(null);
   const backgroundAudioRef = useRef(null);
@@ -206,31 +209,33 @@ function Navbar() {
           </Link>
         )}
 
-        {/* Admin */}
+        {/* ================== Admin Dropdown ================== */}
         {user?.role === "admin" && (
-          <>
-            <Link to="/admin" className="nav-link admin-link">
-              Admin Panel
-            </Link>
-            <Link to="/admin/songs" className="nav-link admin-link">
-              Songs Management
-            </Link>
-            <Link to="/admin/analytics" className="nav-link admin-link">
-              Analytics
-            </Link>
-            <Link to="/admin/generate-codes" className="nav-link admin-link">
-              Generate Code
-            </Link>
-            <Link to="/admin" className="nav-link">
-              Admin Panel
-            </Link>
-            <Link to="/admin/songs" className="nav-link">
-              Songs
-            </Link>
-            <Link to="/admin/analytics" className="nav-link">
-              Analytics
-            </Link>
-          </>
+          <div className="admin-dropdown">
+            <button
+              className="nav-link admin-link dropdown-toggle"
+              onClick={() => setShowAdminMenu(!showAdminMenu)}
+            >
+              Admin
+            </button>
+
+            {showAdminMenu && (
+              <div className="dropdown-menu">
+                <Link to="/admin" className="dropdown-item">
+                  Admin Panel
+                </Link>
+                <Link to="/admin/songs" className="dropdown-item">
+                  Songs Management
+                </Link>
+                <Link to="/admin/analytics" className="dropdown-item">
+                  Analytics
+                </Link>
+                <Link to="/admin/generate-codes" className="dropdown-item">
+                  Generate Code
+                </Link>
+              </div>
+            )}
+          </div>
         )}
 
         {/* User pages */}
@@ -257,7 +262,9 @@ function Navbar() {
                 {notifications.map((n, idx) => (
                   <div
                     key={idx}
-                    className={`notification-item ${n.unread ? "unread" : ""}`}
+                    className={`notification-item ${
+                      n.unread ? "unread" : ""
+                    }`}
                   >
                     {n.message}
                   </div>
