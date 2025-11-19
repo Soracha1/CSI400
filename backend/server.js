@@ -13,6 +13,8 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Server } from "socket.io";
 import http from "http";
+import cron from "node-cron";
+import RedeemCode from "./models/RedeemCode.js";
 
 dotenv.config();
 const app = express();
@@ -65,6 +67,9 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     lastActivity: { type: Date, default: Date.now },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
+    plan: { type: String, default: "FREE" }, // FREE, SOCOZY, SUPERCOZY, COZIEST
+    planStart: { type: Date, default: null }, // วันเริ่มแพ็คเกจ
+    planExpire: { type: Date, default: null }, // วันหมดอายุแพ็คเกจ
   },
   { timestamps: true } // ✅ เพิ่ม timestamps
 );
@@ -869,11 +874,12 @@ app.get("/api/admin/songs", verifyToken, isAdmin, async (req, res) => {
 
 // Update song (Admin)
 // ================= Admin Update Song =================
+// ================= Admin Update Song =================
 app.put(
   "/api/admin/songs/:id",
   verifyToken,
   isAdmin,
-  upload.single("music"), // รองรับไฟล์เพลงใหม่
+  musicUpload.single("music"), // <-- เปลี่ยนตรงนี้
   async (req, res) => {
     try {
       const song = await Song.findById(req.params.id);
@@ -900,7 +906,6 @@ app.put(
             try {
               song[field] = JSON.parse(req.body[field]);
             } catch {
-              // ถ้าไม่ใช่ JSON, แยก comma
               song[field] = req.body[field]
                 .split(",")
                 .map((t) => t.trim())
@@ -1014,7 +1019,87 @@ app.get(
   }
 );
 
+app.post("/api/admin/gencode", async (req, res) => {
+  const { plan } = req.body;
+  const txt = plan.toUpperCase().replace(" ", "");
+
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const code = `${txt}-${random}`;
+
+  await RedeemCode.create({ code, plan });
+
+  res.json({ success: true, code });
+});
+
+app.post("/api/redeem", async (req, res) => {
+  const { code, userId } = req.body;
+
+  const findCode = await RedeemCode.findOne({ code });
+
+  if (!findCode) return res.json({ success: false, message: "โค้ดไม่ถูกต้อง" });
+  if (findCode.used)
+    return res.json({ success: false, message: "โค้ดถูกใช้แล้ว" });
+
+  const user = await User.findById(userId);
+  if (!user) return res.json({ success: false, message: "ไม่พบผู้ใช้" });
+
+  let upload = 0,
+    download = 0;
+
+  if (findCode.plan === "SOCOZY") {
+    upload = 100;
+    download = 300;
+  }
+  if (findCode.plan === "SUPERCOZY") {
+    upload = 200;
+    download = 600;
+  }
+  if (findCode.plan === "COZIEST") {
+    upload = Infinity;
+    download = Infinity;
+  }
+
+  const now = new Date();
+  const expire = new Date(now);
+  expire.setDate(expire.getDate() + 30);
+
+  user.maxUpload = upload;
+  user.maxDownload = download;
+  user.plan = findCode.plan;
+  user.planStart = now;
+  user.planExpire = expire;
+
+  await user.save();
+
+  findCode.used = true;
+  await findCode.save();
+
+  res.json({ success: true });
+});
+
+cron.schedule("0 0 * * *", async () => {
+  const today = new Date();
+
+  // หา user ที่แพ็คเกจหมดอายุแล้ว
+  const expiredUsers = await User.find({
+    planExpire: { $lte: today },
+    plan: { $ne: "FREE" },
+  });
+
+  for (const u of expiredUsers) {
+    // รีเซ็ตกลับเป็น FREE
+    u.plan = "FREE";
+    u.maxUpload = 3; // free default
+    u.maxDownload = 5; // free default
+    u.planStart = null;
+    u.planExpire = null;
+
+    await u.save();
+  }
+
+  console.log(`⏳ Reset expired plans: ${expiredUsers.length}`);
+});
+
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

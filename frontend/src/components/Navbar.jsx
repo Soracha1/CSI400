@@ -176,6 +176,9 @@ function Navbar() {
             <Link to="/admin/analytics" className="nav-link admin-link">
               Analytics
             </Link>
+            <Link to="/admin/generate-codes" className="nav-link admin-link">
+              Generate Code
+            </Link>
           </>
         )}
 
