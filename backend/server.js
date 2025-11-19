@@ -114,17 +114,6 @@ const isAdmin = async (req, res, next) => {
   next();
 };
 
-// ===== Multer Upload Config =====
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // โฟลเดอร์เก็บไฟล์เพลง
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({ storage });
 // ================= สร้างโฟลเดอร์ =================
 const uploadsDir = path.join(__dirname, "uploads/music");
 const avatarsDir = path.join(__dirname, "uploads/avatars");
@@ -374,33 +363,16 @@ app.get("/api/songs/top-downloads", async (req, res) => {
   }
 });
 
-// app.get("/api/songs/:id", async (req, res) => {
-//   try {
-//     // ✅ แก้ไข: เพิ่ม .populate("user") เพื่อดึงข้อมูลคนอัปโหลด (_id, username) มาด้วย
-//     const song = await Song.findById(req.params.id).populate("user", "username picture");
-
-//     const token = req.headers["authorization"]?.split(" ")[1];
-//     if (!token) return res.status(401).json({ message: "No token" });
-
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
-//     const user = await User.findById(decoded.id).select("-password");
-//     if (!user) return res.status(404).json({ message: "User not found" });
-
-//     res.json(user);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// });
 app.get("/api/songs/:id", async (req, res) => {
   try {
-    const song = await Song.findById(req.params.id).populate(
-      "user",
-      "username picture"
-    );
+    const token = req.headers["authorization"]?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "No token" });
 
-    if (!song) return res.status(404).json({ message: "Song not found" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(song);
+    res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -751,18 +723,11 @@ app.put(
 // ================= Notifications =================
 app.get("/api/notifications", async (req, res) => {
   try {
-    const { userId } = req.query; // รับ userId จาก query
-    let query = {};
-    if (userId) {
-      query.user = userId; // filter ตาม user
-    }
-
-    const notifications = await Notification.find(query)
+    const notifications = await Notification.find()
       .sort({ createdAt: -1 })
       .limit(20)
       .populate("user", "username picture")
       .populate("song", "title artist");
-
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -786,38 +751,17 @@ app.post("/api/notifications", async (req, res) => {
   }
 });
 
-// ================= Get Song Details with Uploader Info =================
-// GET song details by ID พร้อมข้อมูล uploader
-app.get("/api/songs/:id", verifyToken, async (req, res) => {
-  try {
-    // ดึงข้อมูลเพลงและ populate ข้อมูล uploader
-    const song = await Song.findById(req.params.id).populate(
-      "user",
-      "username picture"
-    );
-
-    if (!song) {
-      return res.status(404).json({ message: "Song not found" });
-    }
-
-    // ส่งข้อมูล song กลับ
-    res.json(song);
-  } catch (err) {
-    console.error("Error fetching song:", err);
-    res.status(500).json({ message: err.message });
-  }
-});
-
+// =========================
 // TAGS ดึงแท็กทั้งหมด
 // ================= Tags =================
-// app.get("/api/tags", async (req, res) => {
-//   try {
-//     const tags = await Song.find().distinct("tags");
-//     res.json(tags.filter((t) => t && t.trim() !== ""));
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
+app.get("/api/tags", async (req, res) => {
+  try {
+    const tags = await Song.find().distinct("tags");
+    res.json(tags.filter((t) => t && t.trim() !== ""));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ================= Admin Routes =================
 app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
@@ -854,7 +798,6 @@ app.use(
   },
   express.static(path.join(__dirname, "uploads"))
 );
-// =================  =================
 
 // ================= Socket.IO =================
 const server = http.createServer(app);
@@ -937,8 +880,6 @@ app.put(
   verifyToken,
   isAdmin,
   musicUpload.single("music"), // <-- เปลี่ยนตรงนี้
-  musicUpload.single("music"), // รองรับไฟล์เพลงใหม่
-  upload.single("music"), // รองรับไฟล์เพลงใหม่
   async (req, res) => {
     try {
       const song = await Song.findById(req.params.id);
@@ -1127,36 +1068,54 @@ app.post("/api/redeem", async (req, res) => {
   user.plan = findCode.plan;
   user.planStart = now;
   user.planExpire = expire;
-
   await user.save();
 
   findCode.used = true;
+  findCode.usedBy = user._id; // <-- สำคัญ
   await findCode.save();
 
   res.json({ success: true });
 });
 
-cron.schedule("0 0 * * *", async () => {
-  const today = new Date();
+// GET โค้ดของ user ปัจจุบัน
+app.get("/api/user/:id/code", verifyToken, async (req, res) => {
+  try {
+    if (req.userId !== req.params.id) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
-  // หา user ที่แพ็คเกจหมดอายุแล้ว
-  const expiredUsers = await User.find({
-    planExpire: { $lte: today },
-    plan: { $ne: "FREE" },
-  });
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  for (const u of expiredUsers) {
-    // รีเซ็ตกลับเป็น FREE
-    u.plan = "FREE";
-    u.maxUpload = 3; // free default
-    u.maxDownload = 5; // free default
-    u.planStart = null;
-    u.planExpire = null;
+    const now = new Date();
+    const remainingDays =
+      user.planExpire && user.planExpire > now
+        ? Math.ceil((user.planExpire - now) / (1000 * 60 * 60 * 24))
+        : 0;
 
-    await u.save();
+    res.json({
+      plan: user.plan,
+      expire: user.planExpire,
+      remainingDays,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+});
 
-  console.log(`⏳ Reset expired plans: ${expiredUsers.length}`);
+// GET ประวัติ RedeemCode (เฉพาะ admin)
+app.get("/api/admin/codes", verifyToken, isAdmin, async (req, res) => {
+  try {
+    // ดึงข้อมูลโค้ด พร้อม populate ผู้ใช้ที่ใช้โค้ด
+    const codes = await RedeemCode.find()
+      .sort({ createdAt: -1 })
+      .populate("usedBy", "username email"); // เอาเฉพาะ username และ email
+
+    res.json(codes);
+  } catch (err) {
+    console.error("❌ Error fetching redeem codes:", err);
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // ================= Start Server =================

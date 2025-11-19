@@ -21,6 +21,7 @@ import AdminSongs from "./admin/AdminSongs";
 import AdminAnalytics from "./admin/AdminAnalytics";
 import UserAnalytics from "./analytic/UserAnalytics";
 import AdminGenCode from "./admin/AdminGenCode";
+import AdminCodeHistory from "./admin/AdminCodeHistory";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,6 +69,7 @@ function App() {
         <Route path="/admin/songs" element={<AdminSongs />} />
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
         <Route path="/admin/generate-codes" element={<AdminGenCode />} />
+        <Route path="/admin/code-history" element={<AdminCodeHistory />} />
         <Route path="/analytics" element={<UserAnalytics />} />
 
         {/* Auth */}
