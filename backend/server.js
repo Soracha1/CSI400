@@ -15,12 +15,15 @@ import { Server } from "socket.io";
 import http from "http";
 import cron from "node-cron";
 import RedeemCode from "./models/RedeemCode.js";
+import { swaggerServe, swaggerSetup } from "./swagger.js";
 
 dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
 // ================= Middleware =================
+app.use("/api-docs", swaggerServe, swaggerSetup);
+
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://localhost:5173"],
@@ -164,6 +167,37 @@ const avatarUpload = multer({
 });
 
 // ================= Auth Routes =================
+/**
+ * @swagger
+ * /api/register:
+ *   post:
+ *     summary: สมัครสมาชิก
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: สมัครสำเร็จ
+ *       400:
+ *         description: Email มีอยู่แล้ว
+ *       500:
+ *         description: เกิดข้อผิดพลาด
+ */
 app.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -1121,3 +1155,4 @@ app.get("/api/admin/codes", verifyToken, isAdmin, async (req, res) => {
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+console.log("Swagger docs: http://localhost:5000/api-docs");
