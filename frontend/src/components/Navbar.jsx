@@ -1,3 +1,4 @@
+// Navbar.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -19,6 +20,7 @@ function Navbar() {
 
   const socketRef = useRef(null);
   const userIdRef = useRef(null);
+  const backgroundAudioRef = useRef(null);
   const navigate = useNavigate();
 
   // ================== Fetch limits ==================
@@ -36,7 +38,9 @@ function Navbar() {
   const loadNotifications = async (userId) => {
     if (!userId) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/notifications?userId=${userId}`);
+      const res = await fetch(
+        `http://localhost:5000/api/notifications?userId=${userId}`
+      );
       const data = await res.json();
       const notifWithUnread = data.map((n) => ({ ...n, unread: true }));
       setNotifications(notifWithUnread);
@@ -58,30 +62,36 @@ function Navbar() {
     }
   }, []);
 
+  // ================== Volume slider ==================
+  useEffect(() => {
+    if (backgroundAudioRef.current) {
+      backgroundAudioRef.current.volume = volume;
+    }
+    window.dispatchEvent(new CustomEvent("volumeChanged", { detail: volume }));
+  }, [volume]);
+
   // ================== Socket.IO ==================
   useEffect(() => {
     if (!userIdRef.current) return;
 
-    if (!socketRef.current) {
-      socketRef.current = io("http://localhost:5000");
+    socketRef.current = io("http://localhost:5000");
 
-      socketRef.current.on("connect", () => {
-        console.log("Socket connected:", socketRef.current.id);
-      });
+    socketRef.current.on("connect", () => {
+      console.log("Socket connected:", socketRef.current.id);
+    });
 
-      socketRef.current.on("notification", (notif) => {
-        if (notif.userId === userIdRef.current) {
-          const newNotif = { ...notif, unread: true };
-          setNotifications((prev) => [newNotif, ...prev]);
-          setUnreadCount((prev) => prev + 1);
-        }
-      });
-    }
+    socketRef.current.on("notification", (notif) => {
+      if (notif.userId === userIdRef.current) {
+        const newNotif = { ...notif, unread: true };
+        setNotifications((prev) => [newNotif, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
-  }, [userIdRef.current]);
+  }, []);
 
   // ================== Listen for login/logout/profile updates ==================
   useEffect(() => {
@@ -144,6 +154,15 @@ function Navbar() {
 
   return (
     <header className="header">
+      {/* Background audio */}
+      <audio
+        ref={backgroundAudioRef}
+        src="/background.mp3"
+        autoPlay
+        loop
+        style={{ display: "none" }}
+      />
+
       <div className="header-left">
         <Link to="/">
           <img src={logo} alt="Logo" className="logo" />
@@ -201,14 +220,21 @@ function Navbar() {
           <div className="notification-wrapper">
             <button className="icon-button" onClick={toggleNotifications}>
               <FaBell size={18} />
-              {unreadCount > 0 && <span className="notification-dot">{unreadCount}</span>}
+              {unreadCount > 0 && (
+                <span className="notification-dot">{unreadCount}</span>
+              )}
             </button>
 
             {showNotifications && (
               <div className="notification-dropdown">
                 {notifications.length === 0 && <p>No notifications</p>}
                 {notifications.map((n, idx) => (
-                  <div key={idx} className={`notification-item ${n.unread ? "unread" : ""}`}>
+                  <div
+                    key={idx}
+                    className={`notification-item ${
+                      n.unread ? "unread" : ""
+                    }`}
+                  >
                     {n.message}
                   </div>
                 ))}

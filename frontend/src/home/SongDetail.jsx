@@ -1,8 +1,7 @@
-// SongDetail.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import Swal from "sweetalert2"; // แจ้งเตือน
+import Swal from "sweetalert2"; 
 import { FaPlay, FaPause, FaDownload, FaArrowLeft } from "react-icons/fa";
 import "./SongDetail.css";
 
@@ -10,6 +9,8 @@ function SongDetail() {
   const { id } = useParams();
   const [song, setSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -28,11 +29,8 @@ function SongDetail() {
         }
 
         const res = await axios.get(`http://localhost:5000/api/songs/${id}`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
-console.log(res.data);
-
-        console.log("Song API response:", res.data); // debug
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setSong(res.data);
       } catch (err) {
         console.error("Fetch song error:", err);
@@ -48,6 +46,7 @@ console.log(res.data);
     fetchSong();
   }, [id, navigate, token]);
 
+  // เล่น/หยุดเพลง
   const handlePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -58,7 +57,30 @@ console.log(res.data);
     setIsPlaying(!isPlaying);
   };
 
+  // อัปเดตเวลาเพลง
+  const handleTimeUpdate = () => {
+    setCurrentTime(audioRef.current.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    setDuration(audioRef.current.duration);
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const formatTime = (seconds) => {
+    if (!seconds) return "0:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // ดาวน์โหลดเพลง
   const handleDownload = async () => {
+    if (!song) return;
     try {
       if (!token) {
         Swal.fire({
@@ -73,45 +95,16 @@ console.log(res.data);
         return;
       }
 
-      // ตรวจสอบโควต้าจาก backend
-      const quotaRes = await axios.get(
-        `http://localhost:5000/api/users/download-quota`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (!quotaRes.data.allowed) {
-        Swal.fire({
-          icon: "error",
-          title: "โควต้าดาวน์โหลดเต็ม",
-          text: "คุณไม่สามารถดาวน์โหลดเพลงได้อีกในตอนนี้",
-          timer: 2000,
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-        });
-        return;
-      }
-
       const response = await axios.get(
         `http://localhost:5000/${song.filePath || ""}`,
-        {
-          responseType: "blob",
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { responseType: "blob", headers: { Authorization: `Bearer ${token}` } }
       );
-
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `${song.title || "เพลง"}.mp3`);
       link.click();
       link.remove();
-
-      await axios.post(
-        `http://localhost:5000/api/songs/${song._id}/download`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
 
       Swal.fire({
         icon: "success",
@@ -138,6 +131,8 @@ console.log(res.data);
 
   if (!song) return <p className="loading">กำลังโหลดข้อมูลเพลง... หรือไม่มีข้อมูล</p>;
 
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+
   return (
     <div className="song-detail-wrapper">
       <button className="back-btn" onClick={() => navigate(-1)}>
@@ -158,15 +153,23 @@ console.log(res.data);
         <p><strong>Likes:</strong> {song.likes ?? 0} 💖</p>
         <p><strong>Downloads:</strong> {song.downloads ?? 0} ⬇</p>
         <p><strong>Tags:</strong> {song.tags && song.tags.length > 0 ? song.tags.join(", ") : "ไม่มี tag"}</p>
-        
       </div>
 
       <div className="player-section">
         <audio
           ref={audioRef}
           src={`http://localhost:5000/${song.filePath || ""}`}
-          onEnded={() => setIsPlaying(false)}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={handleEnded}
         />
+      
+
+        {/* Progress bar */}
+        <div className="song-progress">
+          <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
+        </div>
+
         <div className="controls">
           <button className="song-play-btn" onClick={handlePlayPause}>
             {isPlaying ? <FaPause /> : <FaPlay />} {isPlaying ? "หยุด" : "เล่นเพลง"}
@@ -176,6 +179,8 @@ console.log(res.data);
             <FaDownload /> ดาวน์โหลด
           </button>
         </div>
+
+        <p className="time-display">{formatTime(currentTime)} / {formatTime(duration)}</p>
       </div>
     </div>
   );
