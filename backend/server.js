@@ -44,28 +44,30 @@ const notificationSchema = new mongoose.Schema({
 });
 const Notification = mongoose.model("Notification", notificationSchema);
 
-// ✅ อัปเดต User Schema เพิ่ม Social Media
-const userSchema = new mongoose.Schema({
-  username: String,
-  email: String,
-  password: String,
-  googleId: String,
-  picture: String,
-  avatar: String,
-  bio: String,
-  // ✅ เพิ่มฟิลด์ Social Media
-  tiktok: { type: String, default: '', trim: true },
-  instagram: { type: String, default: '', trim: true },
-  facebook: { type: String, default: '', trim: true },
-  // ฟิลด์เดิม
-  downloadCount: { type: Number, default: 0 },
-  uploadCount: { type: Number, default: 0 },
-  maxUpload: { type: Number, default: 3 },
-  maxDownload: { type: Number, default: 5 },
-  role: { type: String, enum: ["user", "admin"], default: "user" },
-  lastActivity: { type: Date, default: Date.now },
-  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
-});
+const userSchema = new mongoose.Schema(
+  {
+    username: String,
+    email: String,
+    password: String,
+    googleId: String,
+    picture: String,
+    avatar: String,
+    bio: String,
+    // ✅ Social Media
+    tiktok: { type: String, default: "", trim: true },
+    instagram: { type: String, default: "", trim: true },
+    facebook: { type: String, default: "", trim: true },
+    // ฟิลด์เดิม
+    downloadCount: { type: Number, default: 0 },
+    uploadCount: { type: Number, default: 0 },
+    maxUpload: { type: Number, default: 3 },
+    maxDownload: { type: Number, default: 5 },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    lastActivity: { type: Date, default: Date.now },
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
+  },
+  { timestamps: true } // ✅ เพิ่ม timestamps
+);
 const User = mongoose.model("User", userSchema);
 
 const songSchema = new mongoose.Schema({
@@ -132,24 +134,28 @@ const musicUpload = multer({ storage: musicStorage });
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, avatarsDir),
   filename: (req, file, cb) => {
-    const uniqueName = `avatar-${req.userId || Date.now()}-${Date.now()}${path.extname(file.originalname)}`;
+    const uniqueName = `avatar-${
+      req.userId || Date.now()
+    }-${Date.now()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
 
-const avatarUpload = multer({ 
+const avatarUpload = multer({
   storage: avatarStorage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     }
     cb(new Error("รองรับเฉพาะไฟล์รูปภาพเท่านั้น (jpeg, jpg, png, gif, webp)"));
-  }
+  },
 });
 
 // ================= Auth Routes =================
@@ -224,11 +230,18 @@ passport.use(
       try {
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
+          // สร้าง user ใหม่พร้อมค่า default
           user = await User.create({
             username: profile.displayName,
             email: profile.emails?.[0]?.value,
             googleId: profile.id,
             picture: profile.photos?.[0]?.value,
+            downloadCount: 0,
+            uploadCount: 0,
+            maxUpload: 3,
+            maxDownload: 5,
+            role: "user",
+            lastActivity: new Date(),
           });
         }
         done(null, user);
@@ -253,11 +266,14 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/" }),
   (req, res) => {
+    // สร้าง JWT token
     const token = jwt.sign(
       { id: req.user._id },
       process.env.JWT_SECRET || "secret",
       { expiresIn: "7d" }
     );
+
+    // redirect พร้อม token ให้ frontend
     res.redirect(`http://localhost:5173/?token=${token}`);
   }
 );
@@ -344,11 +360,32 @@ app.get("/api/songs/top-downloads", async (req, res) => {
 
 
 
-app.get("/api/songs/:id", async (req, res) => {
-  try {
-    // ✅ แก้ไข: เพิ่ม .populate("user") เพื่อดึงข้อมูลคนอัปโหลด (_id, username) มาด้วย
-    const song = await Song.findById(req.params.id).populate("user", "username picture");
+// app.get("/api/songs/:id", async (req, res) => {
+//   try {
+//     // ✅ แก้ไข: เพิ่ม .populate("user") เพื่อดึงข้อมูลคนอัปโหลด (_id, username) มาด้วย
+//     const song = await Song.findById(req.params.id).populate("user", "username picture");
     
+//     const token = req.headers["authorization"]?.split(" ")[1];
+//     if (!token) return res.status(401).json({ message: "No token" });
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
+//     const user = await User.findById(decoded.id).select("-password");
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     res.json(user);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// });
+
+// =========================
+// TAGS ดึงแท็กทั้งหมด
+// ================= Tags =================
+app.get("/api/tags", async (req, res) => {
+  try {
+    const tags = await Song.find().distinct("tags");
+    res.json(tags.filter((t) => t && t.trim() !== ""));
+    const song = await Song.findById(req.params.id);
     if (!song) return res.status(404).json({ message: "Song not found" });
     res.json(song);
   } catch (err) {
@@ -394,11 +431,11 @@ app.post("/api/songs/:id/favorite", verifyToken, async (req, res) => {
     }
 
     await User.findByIdAndUpdate(req.userId, {
-      $push: { favorites: songId }
+      $push: { favorites: songId },
     });
 
     await Song.findByIdAndUpdate(songId, {
-      $inc: { likes: 1 }
+      $inc: { likes: 1 },
     });
 
     res.json({ message: "Added to favorites" });
@@ -412,11 +449,11 @@ app.delete("/api/songs/:id/favorite", verifyToken, async (req, res) => {
     const songId = req.params.id;
 
     await User.findByIdAndUpdate(req.userId, {
-      $pull: { favorites: songId }
+      $pull: { favorites: songId },
     });
 
     await Song.findByIdAndUpdate(songId, {
-      $inc: { likes: -1 }
+      $inc: { likes: -1 },
     });
 
     res.json({ message: "Removed from favorites" });
@@ -427,16 +464,15 @@ app.delete("/api/songs/:id/favorite", verifyToken, async (req, res) => {
 
 app.get("/api/user/:id/favorites", verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.params.id)
-      .populate({
-        path: "favorites",
-        populate: { path: "user", select: "username picture" }
-      });
-    
+    const user = await User.findById(req.params.id).populate({
+      path: "favorites",
+      populate: { path: "user", select: "username picture" },
+    });
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     res.json(user.favorites || []);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -472,10 +508,10 @@ app.post("/api/songs/:id/download", verifyToken, async (req, res) => {
 
     io.emit("notification", notification);
 
-    res.json({ 
+    res.json({
       message: "Download recorded successfully",
       song,
-      notification 
+      notification,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -490,12 +526,12 @@ app.get("/api/songs/:id/file", verifyToken, async (req, res) => {
     }
 
     const filePath = path.join(__dirname, song.filePath);
-    
+
     if (!fs.existsSync(filePath)) {
       console.error("❌ File not found:", filePath);
-      return res.status(404).json({ 
+      return res.status(404).json({
         message: "File not found on server",
-        path: song.filePath 
+        path: song.filePath,
       });
     }
 
@@ -520,8 +556,9 @@ app.get("/api/users/download-quota", verifyToken, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const allowed = user.role === "admin" || user.downloadCount < user.maxDownload;
-    
+    const allowed =
+      user.role === "admin" || user.downloadCount < user.maxDownload;
+
     res.json({
       allowed,
       current: user.downloadCount,
@@ -537,7 +574,9 @@ app.get("/api/users/download-quota", verifyToken, async (req, res) => {
 app.get("/api/user/:id/downloads", verifyToken, async (req, res) => {
   try {
     if (req.userId !== req.params.id) {
-      return res.status(403).json({ message: "Forbidden: You can only view your own downloads." });
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You can only view your own downloads." });
     }
 
     const downloads = await Notification.find({
@@ -562,13 +601,13 @@ app.get("/api/songs/:id/check", verifyToken, async (req, res) => {
 
     const filePath = path.join(__dirname, song.filePath);
     const fileExists = fs.existsSync(filePath);
-    
+
     res.json({
       exists: fileExists,
       song: song.title,
       filePath: song.filePath,
       fullPath: filePath,
-      message: fileExists ? "File exists ✅" : "File not found ❌"
+      message: fileExists ? "File exists ✅" : "File not found ❌",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -578,7 +617,9 @@ app.get("/api/songs/:id/check", verifyToken, async (req, res) => {
 // ================= User Routes =================
 app.get("/api/user/:id/uploads", async (req, res) => {
   try {
-    const songs = await Song.find({ user: req.params.id }).sort({ createdAt: -1 });
+    const songs = await Song.find({ user: req.params.id }).sort({
+      createdAt: -1,
+    });
     res.json(songs);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -598,91 +639,108 @@ app.get("/api/user/:id/limits", async (req, res) => {
 });
 
 // ================= Update User Profile ✅ อัปเดตให้รองรับ Social Media =================
-app.put("/api/user/:id", verifyToken, avatarUpload.single("avatar"), async (req, res) => {
-  try {
-    console.log("📝 Update request received for user:", req.params.id);
-    console.log("📋 Body:", req.body);
-    console.log("📷 File:", req.file);
+app.put(
+  "/api/user/:id",
+  verifyToken,
+  avatarUpload.single("avatar"),
+  async (req, res) => {
+    try {
+      console.log("📝 Update request received for user:", req.params.id);
+      console.log("📋 Body:", req.body);
+      console.log("📷 File:", req.file);
 
-    // ตรวจสอบว่าเป็นเจ้าของ profile หรือไม่
-    if (req.userId !== req.params.id) {
-      return res.status(403).json({ message: "คุณไม่มีสิทธิ์แก้ไขโปรไฟล์นี้" });
-    }
+      // ตรวจสอบว่าเป็นเจ้าของ profile หรือไม่
+      if (req.userId !== req.params.id) {
+        return res
+          .status(403)
+          .json({ message: "คุณไม่มีสิทธิ์แก้ไขโปรไฟล์นี้" });
+      }
 
-    const { username, email, bio, tiktok, instagram, facebook } = req.body;
-    
-    // ✅ ข้อมูลที่จะอัพเดท (เพิ่ม Social Media)
-    const updateData = {
-      username,
-      email,
-      bio: bio || "",
-      tiktok: tiktok || "",
-      instagram: instagram || "",
-      facebook: facebook || "",
-    };
+      const { username, email, bio, tiktok, instagram, facebook } = req.body;
 
-    // ถ้ามีการอัพโหลดรูปใหม่
-    if (req.file) {
-      updateData.avatar = `http://localhost:5000/uploads/avatars/${req.file.filename}`;
-      updateData.picture = updateData.avatar; // ให้ picture เป็นค่าเดียวกับ avatar
-      console.log("📷 New avatar path:", updateData.avatar);
-      
-      // ลบรูปเก่า (ถ้ามี)
-      const oldUser = await User.findById(req.params.id);
-      if (oldUser.avatar && oldUser.avatar.includes('uploads/avatars')) {
-        const oldPath = path.join(__dirname, oldUser.avatar.replace('http://localhost:5000/', ''));
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-          console.log("🗑️ Old avatar deleted");
+      // ✅ ข้อมูลที่จะอัพเดท (เพิ่ม Social Media)
+      const updateData = {
+        username,
+        email,
+        bio: bio || "",
+        tiktok: tiktok || "",
+        instagram: instagram || "",
+        facebook: facebook || "",
+      };
+
+      // ถ้ามีการอัพโหลดรูปใหม่
+      if (req.file) {
+        updateData.avatar = `http://localhost:5000/uploads/avatars/${req.file.filename}`;
+        updateData.picture = updateData.avatar; // ให้ picture เป็นค่าเดียวกับ avatar
+        console.log("📷 New avatar path:", updateData.avatar);
+
+        // ลบรูปเก่า (ถ้ามี)
+        const oldUser = await User.findById(req.params.id);
+        if (oldUser.avatar && oldUser.avatar.includes("uploads/avatars")) {
+          const oldPath = path.join(
+            __dirname,
+            oldUser.avatar.replace("http://localhost:5000/", "")
+          );
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+            console.log("🗑️ Old avatar deleted");
+          }
         }
       }
+
+      // อัพเดทข้อมูล
+      const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select("-password");
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+      }
+
+      console.log("✅ Profile updated successfully:", updatedUser.username);
+      console.log("🌐 Social Media updated:", {
+        tiktok: updatedUser.tiktok,
+        instagram: updatedUser.instagram,
+        facebook: updatedUser.facebook,
+      });
+
+      res.json({
+        message: "อัพเดทโปรไฟล์สำเร็จ",
+        user: updatedUser,
+      });
+    } catch (err) {
+      console.error("❌ Update profile error:", err);
+      res.status(500).json({
+        message: "เกิดข้อผิดพลาดในการอัพเดทโปรไฟล์",
+        error: err.message,
+      });
     }
-
-    // อัพเดทข้อมูล
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "ไม่พบผู้ใช้" });
-    }
-
-    console.log("✅ Profile updated successfully:", updatedUser.username);
-    console.log("🌐 Social Media updated:", {
-      tiktok: updatedUser.tiktok,
-      instagram: updatedUser.instagram,
-      facebook: updatedUser.facebook
-    });
-    
-    res.json({
-      message: "อัพเดทโปรไฟล์สำเร็จ",
-      user: updatedUser,
-    });
-
-  } catch (err) {
-    console.error("❌ Update profile error:", err);
-    res.status(500).json({ 
-      message: "เกิดข้อผิดพลาดในการอัพเดทโปรไฟล์",
-      error: err.message 
-    });
   }
-});
+);
 
 // ================= Notifications =================
 app.get("/api/notifications", async (req, res) => {
   try {
-    const notifications = await Notification.find()
+    const { userId } = req.query; // รับ userId จาก query
+    let query = {};
+    if (userId) {
+      query.user = userId; // filter ตาม user
+    }
+
+    const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
       .limit(20)
       .populate("user", "username picture")
       .populate("song", "title artist");
+
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 app.post("/api/notifications", async (req, res) => {
   try {
@@ -701,17 +759,38 @@ app.post("/api/notifications", async (req, res) => {
   }
 });
 
-// =========================
-// TAGS ดึงแท็กทั้งหมด
-// ================= Tags =================
-app.get("/api/tags", async (req, res) => {
+// ================= Get Song Details with Uploader Info =================
+// GET song details by ID พร้อมข้อมูล uploader
+app.get("/api/songs/:id", verifyToken, async (req, res) => {
   try {
-    const tags = await Song.find().distinct("tags");
-    res.json(tags.filter((t) => t && t.trim() !== ""));
+    // ดึงข้อมูลเพลงและ populate ข้อมูล uploader
+    const song = await Song.findById(req.params.id).populate(
+      "user",
+      "username picture"
+    );
+
+    if (!song) {
+      return res.status(404).json({ message: "Song not found" });
+    }
+
+    // ส่งข้อมูล song กลับ
+    res.json(song);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching song:", err);
+    res.status(500).json({ message: err.message });
   }
 });
+
+// TAGS ดึงแท็กทั้งหมด
+// ================= Tags =================
+// app.get("/api/tags", async (req, res) => {
+//   try {
+//     const tags = await Song.find().distinct("tags");
+//     res.json(tags.filter((t) => t && t.trim() !== ""));
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
 
 // ================= Admin Routes =================
 app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
@@ -748,6 +827,9 @@ app.use(
   },
   express.static(path.join(__dirname, "uploads"))
 );
+// =================  =================
+
+
 
 // ================= Socket.IO =================
 const server = http.createServer(app);
@@ -766,6 +848,210 @@ io.on("connection", (socket) => {
   );
 });
 
+// ================= User Download Quota =================
+app.get("/api/users/download-quota", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const allowed =
+      user.role === "admin" || user.downloadCount < user.maxDownload;
+
+    res.json({ allowed, remaining: user.maxDownload - user.downloadCount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.put(
+  "/api/admin/users/:id/reset-quota",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      user.uploadCount = 0;
+      user.downloadCount = 0;
+      await user.save();
+
+      res.json({ message: "Quota reset", user });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+app.delete("/api/admin/users/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Admin Songs =================
+// Get all songs (Admin)
+app.get("/api/admin/songs", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const songs = await Song.find().sort({ createdAt: -1 });
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Update song (Admin)
+// ================= Admin Update Song =================
+app.put(
+  "/api/admin/songs/:id",
+  verifyToken,
+  isAdmin,
+  musicUpload.single("music"), // รองรับไฟล์เพลงใหม่
+  async (req, res) => {
+    try {
+      const song = await Song.findById(req.params.id);
+      if (!song) return res.status(404).json({ message: "Song not found" });
+
+      // อัปเดตฟิลด์ต่างๆ
+      const fields = [
+        "title",
+        "artist",
+        "description",
+        "bpm",
+        "key",
+        "mode",
+        "type",
+        "subtype",
+        "tags",
+        "soundType",
+      ];
+
+      fields.forEach((field) => {
+        if (req.body[field] !== undefined) {
+          // แปลง tags ที่ส่งเป็น JSON string กลับเป็น array
+          if (field === "tags" && typeof req.body[field] === "string") {
+            try {
+              song[field] = JSON.parse(req.body[field]);
+            } catch {
+              // ถ้าไม่ใช่ JSON, แยก comma
+              song[field] = req.body[field]
+                .split(",")
+                .map((t) => t.trim())
+                .filter((t) => t);
+            }
+          } else if (field === "bpm") {
+            song[field] = Number(req.body[field]);
+          } else {
+            song[field] = req.body[field];
+          }
+        }
+      });
+
+      // ถ้ามีไฟล์ใหม่ ให้อัปเดต filePath และลบไฟล์เก่า
+      if (req.file) {
+        if (
+          song.filePath &&
+          fs.existsSync(path.join(__dirname, song.filePath))
+        ) {
+          fs.unlinkSync(path.join(__dirname, song.filePath));
+        }
+        song.filePath = `uploads/music/${req.file.filename}`;
+      }
+
+      await song.save();
+      res.json({ message: "Song updated", song });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+// Delete song (Admin)
+app.delete("/api/admin/songs/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ message: "Song not found" });
+
+    // ลบไฟล์เพลง
+    if (song.filePath && fs.existsSync(path.join(__dirname, song.filePath))) {
+      fs.unlinkSync(path.join(__dirname, song.filePath));
+    }
+
+    await song.deleteOne();
+    res.json({ message: "Song deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ================= Admin: Users Growth =================
+app.get(
+  "/api/admin/analytics/users-growth",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const users = await User.find().sort({ createdAt: 1 });
+      const data = users.map((u, idx) => ({
+        date: u.createdAt ? u.createdAt.toISOString().split("T")[0] : "N/A",
+        totalUsers: idx + 1,
+      }));
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+// ================= Admin: Upload/Download =================
+app.get(
+  "/api/admin/analytics/uploads-downloads",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const users = await User.find();
+      const data = users.map((u) => ({
+        username: u.username || "Unknown",
+        uploads: u.uploadCount || 0,
+        downloads: u.downloadCount || 0,
+      }));
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+// ================= Admin: Top Songs =================
+app.get(
+  "/api/admin/analytics/top-songs",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const songs = await Song.find().sort({ downloads: -1 }).limit(5);
+      const data = songs.map((s) => ({
+        title: s.title || "Untitled",
+        downloads: s.downloads || 0,
+        likes: s.likes || 0,
+      }));
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+

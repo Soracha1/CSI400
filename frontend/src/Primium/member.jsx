@@ -6,7 +6,7 @@ function member() {
   const plans = [
     {
       name: "Newbie",
-      credits: "30 Monthly Sample Credits",
+      credits: "",
       price: "Free",
       per: "",
       icon: <FaCompactDisc className="icon cyan" />,
@@ -19,7 +19,7 @@ function member() {
       icon: <FaMicrophoneAlt className="icon pink" />,
     },
     {
-      name: "Coziest!",
+      name: "Super Cozy",
       credits: "600 Monthly Sample Credits",
       price: "300 THB",
       per: "per month",
@@ -44,8 +44,7 @@ function member() {
               <img src="/src/assets/logo.png" alt="Profile" />
             </div>
             <h2 className="profile-name">Name</h2>
-             <p className="profile-username">10 download credits</p>
-
+            <p className="profile-username">10 download credits</p>
           </div>
         </div>
       </div>
@@ -53,12 +52,12 @@ function member() {
       {/* Member status */}
       <div className="status-section">
         <div className="status-text">
-        <h1>Member status</h1>
-        <p>
-          You are currently on our free plan.
-          <br />
-          Your account will be topped up to 5 download credits every Sunday.
-        </p>
+          <h1>Member status</h1>
+          <p>
+            You are currently on our free plan.
+            <br />
+            Your account will be topped up to 5 download credits every Sunday.
+          </p>
         </div>
         <div className="divider"></div>
 
@@ -76,7 +75,7 @@ function member() {
               {/* ✅ ซ่อนปุ่ม SUBSCRIBE สำหรับ Newbie */}
               {plan.name !== "Newbie" && (
                 <button className="subscribe-btn">SUBSCRIBE</button>
-              )} 
+              )}
             </div>
           ))}
         </div>
