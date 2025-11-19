@@ -150,6 +150,7 @@ console.log(res.data);
       </div>
 
       <div className="song-info">
+        <p><strong>คำอธิบาย:</strong> {song.description || "ไม่มีรายละเอียดเพิ่มเติม"}</p>
         <p><strong>ประเภท:</strong> {song.type || "ไม่ระบุ"} / {song.subtype || "ไม่ระบุ"}</p>
         <p><strong>BPM:</strong> {song.bpm ?? "ไม่ระบุ"}</p>
         <p><strong>Key / Mode:</strong> {song.key || "ไม่ระบุ"} / {song.mode || "ไม่ระบุ"}</p>
@@ -157,7 +158,7 @@ console.log(res.data);
         <p><strong>Likes:</strong> {song.likes ?? 0} 💖</p>
         <p><strong>Downloads:</strong> {song.downloads ?? 0} ⬇</p>
         <p><strong>Tags:</strong> {song.tags && song.tags.length > 0 ? song.tags.join(", ") : "ไม่มี tag"}</p>
-        <p><strong>คำอธิบาย:</strong> {song.description || "ไม่มีรายละเอียดเพิ่มเติม"}</p>
+        
       </div>
 
       <div className="player-section">

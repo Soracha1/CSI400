@@ -53,7 +53,7 @@ function App() {
       <Navbar setSearchTerm={setSearchTerm} />
 
       <Routes>
-        {/* หน้าแรก */}
+        {/* Home */}
         <Route
           path="/"
           element={
@@ -68,7 +68,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Rigister />} />
 
-        {/* User Pages */}
+        {/* User */}
         <Route path="/dashboard" element={<SongList />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:id" element={<Profile />} />

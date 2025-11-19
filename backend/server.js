@@ -109,6 +109,18 @@ const isAdmin = async (req, res, next) => {
   next();
 };
 
+
+// ===== Multer Upload Config =====
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // โฟลเดอร์เก็บไฟล์เพลง
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 // ================= สร้างโฟลเดอร์ =================
 const uploadsDir = path.join(__dirname, "uploads/music");
 const avatarsDir = path.join(__dirname, "uploads/avatars");
@@ -377,6 +389,21 @@ app.get("/api/songs/top-downloads", async (req, res) => {
 //     res.status(500).json({ message: err.message });
 //   }
 // });
+ app.get("/api/songs/:id", async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id).populate(
+      "user",
+      "username picture"
+    );
+
+    if (!song) return res.status(404).json({ message: "Song not found" });
+
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 // =========================
 // TAGS ดึงแท็กทั้งหมด
@@ -911,6 +938,7 @@ app.put(
   verifyToken,
   isAdmin,
   musicUpload.single("music"), // รองรับไฟล์เพลงใหม่
+  upload.single("music"), // รองรับไฟล์เพลงใหม่
   async (req, res) => {
     try {
       const song = await Song.findById(req.params.id);
@@ -1054,4 +1082,5 @@ app.get(
 // ================= Start Server =================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 

@@ -16,9 +16,9 @@ function Navbar() {
   const [volume, setVolume] = useState(0.5);
   const [showSlider, setShowSlider] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  // const res = await fetch(`http://localhost:5000/api/notifications?userId=${user._id}`);
 
   const socketRef = useRef(null);
+  const userIdRef = useRef(null);
   const navigate = useNavigate();
 
   // ================== Fetch limits ==================
@@ -26,7 +26,6 @@ function Navbar() {
     try {
       const res = await fetch(`http://localhost:5000/api/user/${id}/limits`);
       const data = await res.json();
-      console.log("Fetched limits:", data);
       setLimits(data);
     } catch (err) {
       console.error("Error fetching limits:", err);
@@ -34,72 +33,66 @@ function Navbar() {
   };
 
   // ================== Load notifications ==================
-const loadNotifications = async (userId) => {
-  try {
-    const res = await fetch(`http://localhost:5000/api/notifications?userId=${userId}`);
-    const data = await res.json();
-    const notifWithUnread = data.map((n) => ({ ...n, unread: true }));
-    setNotifications(notifWithUnread);
-    setUnreadCount(notifWithUnread.filter((n) => n.unread).length);
-  } catch (err) {
-    console.error("Error loading notifications:", err);
-  }
-};
-
-//
-useEffect(() => {
-  const handleNewNotification = (event) => {
-    const notif = event.detail;
-    // ใช้ userIdRef.current แทน user._id
-    if (userIdRef.current && notif.userId === userIdRef.current) {
-      setNotifications((prev) => [notif, ...prev]);
-      setUnreadCount((prev) => prev + 1);
+  const loadNotifications = async (userId) => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/notifications?userId=${userId}`);
+      const data = await res.json();
+      const notifWithUnread = data.map((n) => ({ ...n, unread: true }));
+      setNotifications(notifWithUnread);
+      setUnreadCount(notifWithUnread.length);
+    } catch (err) {
+      console.error("Error loading notifications:", err);
     }
   };
 
-  window.addEventListener("newNotification", handleNewNotification);
-
-  return () => {
-    window.removeEventListener("newNotification", handleNewNotification);
-  };
-}, []); // dependency เป็น [] เพื่อไม่ลบ listener ทุกครั้งที่ user เปลี่ยน
-
-// =================== Get user from localStorage on mount ==================
-const userIdRef = useRef(null);
-
-useEffect(() => {
-  const savedUser = localStorage.getItem("user");
-  if (savedUser) {
-    const parsed = JSON.parse(savedUser);
-    setUser(parsed);
-    userIdRef.current = parsed._id; // เก็บ userId ใน ref
-  }
-}, []);
-
-  // ================== Handle user ==================
+  // ================== First load user ==================
   useEffect(() => {
-    const updateUserFromLocalStorage = () => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      setUser(parsed);
+      userIdRef.current = parsed._id;
+      fetchLimits(parsed._id);
+      loadNotifications(parsed._id);
+    }
+  }, []);
+
+  // ================== Socket.IO ==================
+  useEffect(() => {
+    if (!userIdRef.current) return;
+
+    if (!socketRef.current) {
+      socketRef.current = io("http://localhost:5000");
+
+      socketRef.current.on("connect", () => {
+        console.log("Socket connected:", socketRef.current.id);
+      });
+
+      socketRef.current.on("notification", (notif) => {
+        if (notif.userId === userIdRef.current) {
+          const newNotif = { ...notif, unread: true };
+          setNotifications((prev) => [newNotif, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+        }
+      });
+    }
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, [userIdRef.current]);
+
+  // ================== Listen for login/logout/profile updates ==================
+  useEffect(() => {
+    const updateUser = () => {
       const savedUser = localStorage.getItem("user");
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
+        userIdRef.current = parsed._id;
         fetchLimits(parsed._id);
-        loadNotifications();
-
-        // ================== Socket.IO connection ==================
-        if (!socketRef.current) {
-          socketRef.current = io("http://localhost:5000");
-
-          socketRef.current.on("connect", () => {
-            console.log("✅ Connected to Socket.IO server:", socketRef.current.id);
-          });
-
-          socketRef.current.on("notification", (notif) => {
-            const newNotif = { ...notif, unread: true };
-            setNotifications((prev) => [newNotif, ...prev]);
-            setUnreadCount((prev) => prev + 1);
-          });
-        }
+        loadNotifications(parsed._id);
       } else {
         setUser(null);
         setLimits(null);
@@ -108,39 +101,16 @@ useEffect(() => {
       }
     };
 
-    updateUserFromLocalStorage();
-
-    // Check token in URL
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      localStorage.setItem("token", token);
-      fetch("http://localhost:5000/auth/user", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          localStorage.setItem("user", JSON.stringify(data));
-          window.dispatchEvent(new Event("userLoggedIn"));
-          updateUserFromLocalStorage();
-          navigate("/dashboard");
-        });
-    }
-
-    const handleLoginEvent = () => updateUserFromLocalStorage();
-    const handleProfileUpdated = (event) => setUser(event.detail);
-
-    window.addEventListener("userLoggedIn", handleLoginEvent);
-    window.addEventListener("userLoggedOut", handleLoginEvent);
-    window.addEventListener("profileUpdated", handleProfileUpdated);
+    window.addEventListener("userLoggedIn", updateUser);
+    window.addEventListener("userLoggedOut", updateUser);
+    window.addEventListener("profileUpdated", (e) => setUser(e.detail));
 
     return () => {
-      window.removeEventListener("userLoggedIn", handleLoginEvent);
-      window.removeEventListener("userLoggedOut", handleLoginEvent);
-      window.removeEventListener("profileUpdated", handleProfileUpdated);
-      if (socketRef.current) socketRef.current.disconnect();
+      window.removeEventListener("userLoggedIn", updateUser);
+      window.removeEventListener("userLoggedOut", updateUser);
+      window.removeEventListener("profileUpdated", (e) => setUser(e.detail));
     };
-  }, [navigate]);
+  }, []);
 
   // ================== Logout ==================
   const handleLogout = () => {
@@ -149,9 +119,8 @@ useEffect(() => {
 
     Swal.fire({
       icon: "success",
-      title: "ออกจากระบบเรียบร้อย",
-      text: "🚪 คุณได้ออกจากระบบแล้ว",
-      timer: 2000,
+      title: "ออกจากระบบแล้ว",
+      timer: 1500,
       showConfirmButton: false,
       toast: true,
       position: "top-end",
@@ -161,20 +130,17 @@ useEffect(() => {
     navigate("/");
   };
 
-  // ================== Volume ==================
-  const handleVolumeChange = (value) => setVolume(Number(value));
-
-  const avatarUrl = user?.avatar || user?.picture || defaultAvatar;
-
-  // ================== Toggle Notifications ==================
+  // ================== Notifications ==================
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
+
     if (!showNotifications) {
-      // Mark all notifications as read
       setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
       setUnreadCount(0);
     }
   };
+
+  const avatarUrl = user?.avatar || user?.picture || defaultAvatar;
 
   return (
     <header className="header">
@@ -185,12 +151,11 @@ useEffect(() => {
       </div>
 
       <div className="header-right">
-        {/* Volume */}
+        {/* Volume control */}
         <div className="volume-container">
           <button
             className="icon-button"
             onClick={() => setShowSlider(!showSlider)}
-            title="ปรับระดับเสียงทั้งหมดในเว็บ"
           >
             🔊
           </button>
@@ -201,74 +166,49 @@ useEffect(() => {
               max="1"
               step="0.01"
               value={volume}
-              onChange={(e) => handleVolumeChange(e.target.value)}
+              onChange={(e) => setVolume(Number(e.target.value))}
               className="volume-slider"
             />
           )}
         </div>
 
-        {/* Upload / Download Info */}
-        {limits && user && (
+        {/* Upload/Download Limits */}
+        {user && limits && (
           <div className="usage-info">
-            <span className="upload-info">
-              Upload: {limits.uploadCount}/{limits.maxUpload}
-            </span>{" "}
-            |{" "}
-            <span className="download-info">
-              Download: {limits.downloadCount}/{limits.maxDownload}
-            </span>
+            Upload: {limits.uploadCount}/{limits.maxUpload} | Download:{" "}
+            {limits.downloadCount}/{limits.maxDownload}
           </div>
         )}
 
-        {/* Upload Link */}
-        {user && (
-          <Link to="/upload" className="nav-link">
-            Upload
-          </Link>
-        )}
+        {/* Upload */}
+        {user && <Link to="/upload" className="nav-link">Upload</Link>}
 
-        {/* Admin Links */}
-        {user && user.role === "admin" && (
+        {/* Admin */}
+        {user?.role === "admin" && (
           <>
-            <Link to="/admin" className="nav-link admin-link">
-              Admin Panel
-            </Link>
-            <Link to="/admin/songs" className="nav-link admin-link">
-              Songs Management
-            </Link>
-            <Link to="/admin/analytics" className="nav-link admin-link">
-              Analytics
-            </Link>
+            <Link to="/admin" className="nav-link">Admin Panel</Link>
+            <Link to="/admin/songs" className="nav-link">Songs</Link>
+            <Link to="/admin/analytics" className="nav-link">Analytics</Link>
           </>
         )}
 
-        {/* Other Links */}
-        <Link to="/premium" className="nav-link">
-          Premium
-        </Link>
-        <Link to="/analytics" className="nav-link">
-          Your Analytics
-        </Link>
+        {/* User pages */}
+        <Link to="/premium" className="nav-link">Premium</Link>
+        <Link to="/analytics" className="nav-link">Your Analytics</Link>
 
         {/* Notification */}
         {user && (
           <div className="notification-wrapper">
-            <button
-              className="icon-button"
-              onClick={toggleNotifications}
-              title="Notifications"
-            >
+            <button className="icon-button" onClick={toggleNotifications}>
               <FaBell size={18} />
               {unreadCount > 0 && <span className="notification-dot">{unreadCount}</span>}
             </button>
+
             {showNotifications && (
               <div className="notification-dropdown">
                 {notifications.length === 0 && <p>No notifications</p>}
                 {notifications.map((n, idx) => (
-                  <div
-                    key={idx}
-                    className={`notification-item ${n.unread ? "unread" : ""}`}
-                  >
+                  <div key={idx} className={`notification-item ${n.unread ? "unread" : ""}`}>
                     {n.message}
                   </div>
                 ))}
@@ -277,11 +217,11 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Profile / Logout */}
+        {/* Profile */}
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
-              <img src={avatarUrl} alt="Profile" className="avatar" />
+              <img src={avatarUrl} className="avatar" />
             </Link>
             <button onClick={handleLogout} className="gradient-login-button">
               Logout
@@ -289,12 +229,8 @@ useEffect(() => {
           </>
         ) : (
           <>
-            <Link to="/register" className="nav-link">
-              Register
-            </Link>
-            <Link to="/login" className="gradient-login-button">
-              Login
-            </Link>
+            <Link to="/register" className="nav-link">Register</Link>
+            <Link to="/login" className="gradient-login-button">Login</Link>
           </>
         )}
       </div>

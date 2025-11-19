@@ -16,6 +16,8 @@ function SongList({ searchTerm }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [durations, setDurations] = useState({});
   const [currentTimes, setCurrentTimes] = useState({});
+
+  const audioIntervals = useRef({});
   const navigate = useNavigate();
   const songsPerPage = 5;
 
@@ -35,14 +37,18 @@ function SongList({ searchTerm }) {
 
   useEffect(() => {
     // Cleanup audio intervals on unmount
-    return () => {
-      Object.values(audioRefs.current).forEach((audio) => {
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-      });
-    };
+  return () => {
+  Object.values(audioIntervals.current).forEach((interval) => {
+    clearInterval(interval);
+  });
+  Object.values(audioRefs.current).forEach((audio) => {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  });
+};
+
   }, []);
 
   const loadAllData = async () => {
@@ -103,6 +109,7 @@ function SongList({ searchTerm }) {
         );
         setFavorites((prev) => [...prev, id]);
       }
+
       window.dispatchEvent(new Event("favoriteChanged"));
       loadAllData();
     } catch (err) {
@@ -121,6 +128,7 @@ function SongList({ searchTerm }) {
       });
       return;
     }
+
     try {
       const response = await axios.get(`${BASE_URL}/${song.filePath}`, {
         responseType: "blob",
@@ -138,7 +146,9 @@ function SongList({ searchTerm }) {
       await axios.post(
         `${BASE_URL}/api/songs/${song._id}/download`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       Swal.fire({
@@ -162,36 +172,48 @@ function SongList({ searchTerm }) {
   };
 
   const togglePlay = (id) => {
-    const audio = audioRefs.current[id];
-    if (!audio) return;
+  const audio = audioRefs.current[id];
+  if (!audio) return;
 
-    // หยุดเพลงเดิม
-    if (currentPlaying && currentPlaying !== id) {
-      const prevAudio = audioRefs.current[currentPlaying];
-      if (prevAudio) {
-        prevAudio.pause();
-        prevAudio.currentTime = 0;
-        setCurrentTimes((prev) => ({ ...prev, [currentPlaying]: 0 }));
-      }
+  // หยุดเพลงก่อนหน้า
+  if (currentPlaying && currentPlaying !== id) {
+    const prevAudio = audioRefs.current[currentPlaying];
+    if (prevAudio) {
+      prevAudio.pause();
+      prevAudio.currentTime = 0;
+      setCurrentTimes((prev) => ({ ...prev, [currentPlaying]: 0 }));
+      clearInterval(audioIntervals.current[currentPlaying]);
     }
+  }
 
-    if (audio.paused) {
-      audio.play();
-      setCurrentPlaying(id);
-      audio.ontimeupdate = () => {
-        setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
-      };
-      audio.onended = () => {
-        setCurrentPlaying(null);
-        setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
-      };
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
+  if (audio.paused) {
+    audio.play();
+    setCurrentPlaying(id);
+
+    // ontimeupdate
+    audio.ontimeupdate = () => {
+      setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
+    };
+
+    // setInterval backup
+    audioIntervals.current[id] = setInterval(() => {
+      setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
+    }, 200);
+
+    audio.onended = () => {
+      clearInterval(audioIntervals.current[id]);
       setCurrentPlaying(null);
       setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
-    }
-  };
+    };
+  } else {
+    audio.pause();
+    audio.currentTime = 0;
+    clearInterval(audioIntervals.current[id]);
+    setCurrentPlaying(null);
+    setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
+  }
+};
+
 
   const formatTime = (seconds) => {
     if (!seconds) return "0:00";
@@ -316,13 +338,15 @@ function SongList({ searchTerm }) {
         ></div>
       </div>
 
-      <audio
-        ref={(el) => (audioRefs.current[song._id] = el)}
-        src={`${BASE_URL}/${song.filePath}`}
-        onLoadedMetadata={(e) =>
-          setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
-        }
-      />
+   <audio
+  ref={(el) => (audioRefs.current[song._id] = el)}
+  id={`audio-${song._id}`}
+  src={`${BASE_URL}/${song.filePath}`}
+  onLoadedMetadata={(e) =>
+    setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
+  }
+/>
+
     </div>
   );
 
