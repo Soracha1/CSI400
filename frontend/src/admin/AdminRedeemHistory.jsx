@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./AdminRedeemHistory.css";
 
 const AdminRedeemHistory = () => {
   const [codes, setCodes] = useState([]);
@@ -7,7 +8,7 @@ const AdminRedeemHistory = () => {
   useEffect(() => {
     const fetchCodes = async () => {
       try {
-        const token = localStorage.getItem("token"); // assume JWT stored
+        const token = localStorage.getItem("token");
         const res = await fetch(
           "http://localhost:5000/api/admin/redeem-codes",
           {
@@ -27,40 +28,43 @@ const AdminRedeemHistory = () => {
     fetchCodes();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading)
+    return (
+      <div className="page-content">
+        <p className="loading-text">Loading...</p>
+      </div>
+    );
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">ประวัติโค้ด Redeem (Admin)</h2>
-      <table className="min-w-full bg-white border border-gray-300">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border px-4 py-2">Code</th>
-            <th className="border px-4 py-2">Plan</th>
-            <th className="border px-4 py-2">Status</th>
-            <th className="border px-4 py-2">Created At</th>
-          </tr>
-        </thead>
-        <tbody>
-          {codes.map((c) => (
-            <tr key={c._id}>
-              <td className="border px-4 py-2 font-mono">{c.code}</td>
-              <td className="border px-4 py-2">{c.plan}</td>
-              <td className="border px-4 py-2">
-                {c.used ? (
-                  <span className="text-red-600 font-semibold">Used</span>
-                ) : (
-                  <span className="text-green-600 font-semibold">Unused</span>
-                )}
-              </td>
-              <td className="border px-4 py-2">
-                {new Date(c.createdAt).toLocaleDateString()}{" "}
-                {new Date(c.createdAt).toLocaleTimeString()}
-              </td>
+    <div className="page-content">
+      <h2 className="page-title">ประวัติโค้ด Redeem (Admin)</h2>
+      <div className="table-wrapper">
+        <table className="redeem-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Plan</th>
+              <th>Status</th>
+              <th>Created At</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {codes.map((c) => (
+              <tr key={c._id}>
+                <td className="code-cell">{c.code}</td>
+                <td>{c.plan}</td>
+                <td className={c.used ? "used" : "unused"}>
+                  {c.used ? "Used" : "Unused"}
+                </td>
+                <td>
+                  {new Date(c.createdAt).toLocaleDateString()}{" "}
+                  {new Date(c.createdAt).toLocaleTimeString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
