@@ -13,18 +13,14 @@ function SongList({ searchTerm }) {
   const [favorites, setFavorites] = useState([]);
   const [currentPlaying, setCurrentPlaying] = useState(null);
   const [filterTag, setFilterTag] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0);
   const [durations, setDurations] = useState({});
   const [currentTimes, setCurrentTimes] = useState({});
-
+  const audioRefs = useRef({});
   const audioIntervals = useRef({});
   const navigate = useNavigate();
-  const songsPerPage = 5;
 
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  const audioRefs = useRef({});
 
   useEffect(() => {
     loadAllData();
@@ -32,23 +28,15 @@ function SongList({ searchTerm }) {
   }, []);
 
   useEffect(() => {
-    setCurrentPage(0);
-  }, [searchTerm, filterTag]);
-
-  useEffect(() => {
-    // Cleanup audio intervals on unmount
-  return () => {
-  Object.values(audioIntervals.current).forEach((interval) => {
-    clearInterval(interval);
-  });
-  Object.values(audioRefs.current).forEach((audio) => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-  });
-};
-
+    return () => {
+      Object.values(audioIntervals.current).forEach(clearInterval);
+      Object.values(audioRefs.current).forEach((audio) => {
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    };
   }, []);
 
   const loadAllData = async () => {
@@ -71,9 +59,7 @@ function SongList({ searchTerm }) {
     try {
       const res = await axios.get(
         `${BASE_URL}/api/user/${user._id}/favorites`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setFavorites(res.data.map((song) => song._id));
     } catch (err) {
@@ -103,13 +89,10 @@ function SongList({ searchTerm }) {
         await axios.post(
           `${BASE_URL}/api/songs/${id}/favorite`,
           {},
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setFavorites((prev) => [...prev, id]);
       }
-
       window.dispatchEvent(new Event("favoriteChanged"));
       loadAllData();
     } catch (err) {
@@ -117,6 +100,7 @@ function SongList({ searchTerm }) {
     }
   };
 
+  // DOWNLOAD (เช็คสิทธิ์ก่อน)
   const handleDownload = async (song) => {
     if (!token) {
       Swal.fire({
@@ -129,26 +113,46 @@ function SongList({ searchTerm }) {
       return;
     }
 
+    // ตรวจสอบสิทธิ์ดาวน์โหลด
     try {
+      const checkRes = await axios.get(
+        `${BASE_URL}/api/songs/${song._id}/download-check`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!checkRes.data.allowed) {
+        Swal.fire({
+          icon: "error",
+          title: "คุณไม่สามารถดาวน์โหลดได้ ❌",
+          text: checkRes.data.message || "สิทธิ์ดาวน์โหลดหมดแล้ว",
+          toast: true,
+          position: "top-end",
+          timer: 2500,
+        });
+        return;
+      }
+
+      // ดาวน์โหลดเพลง
       const response = await axios.get(`${BASE_URL}/${song.filePath}`, {
         responseType: "blob",
         headers: { Authorization: `Bearer ${token}` },
       });
+      const blob = new Blob([response.data], { type: "audio/mpeg" });
+      const url = window.URL.createObjectURL(blob);
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `${song.title}.mp3`);
+      link.download = `${song.title}.mp3`;
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
+      // อัปเดต download count
       await axios.post(
         `${BASE_URL}/api/songs/${song._id}/download`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       Swal.fire({
@@ -163,44 +167,38 @@ function SongList({ searchTerm }) {
       console.error("Download error:", err);
       Swal.fire({
         icon: "error",
-        title: "ดาวน์โหลดล้มเหลว",
+        title: "ไม่สามารถดาวน์โหลดเพลงได้",
+        text: err.response?.data?.message || "",
         toast: true,
         position: "top-end",
-        timer: 2000,
+        timer: 2500,
       });
     }
   };
 
-const togglePlay = (id) => {
-  const audio = audioRefs.current[id];
-  if (!audio) return;
+  const togglePlay = (id) => {
+    const audio = audioRefs.current[id];
+    if (!audio) return;
 
-  // หยุดเพลงก่อนหน้า
-  if (currentPlaying && currentPlaying !== id) {
-    const prevAudio = audioRefs.current[currentPlaying];
-    if (prevAudio) prevAudio.pause();
-  }
+    if (currentPlaying && currentPlaying !== id) {
+      const prevAudio = audioRefs.current[currentPlaying];
+      if (prevAudio) prevAudio.pause();
+    }
 
-  if (audio.paused) {
-    audio.play();
-    setCurrentPlaying(id);
-
-    audio.ontimeupdate = () => {
-      setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
-    };
-
-    audio.onended = () => {
+    if (audio.paused) {
+      audio.play();
+      setCurrentPlaying(id);
+      audio.ontimeupdate = () =>
+        setCurrentTimes((prev) => ({ ...prev, [id]: audio.currentTime }));
+      audio.onended = () => {
+        setCurrentPlaying(null);
+        setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
+      };
+    } else {
+      audio.pause();
       setCurrentPlaying(null);
-      setCurrentTimes((prev) => ({ ...prev, [id]: 0 }));
-    };
-  } else {
-    audio.pause();
-    setCurrentPlaying(null);
-    // currentTime ไม่ต้องรีเซ็ต
-  }
-};
-
-
+    }
+  };
 
   const formatTime = (seconds) => {
     if (!seconds) return "0:00";
@@ -238,12 +236,6 @@ const togglePlay = (id) => {
     );
   }
 
-  const totalPages = Math.ceil(filteredSongs.length / songsPerPage);
-  const displayedSongs = filteredSongs.slice(
-    currentPage * songsPerPage,
-    currentPage * songsPerPage + songsPerPage
-  );
-
   const renderSongBox = (song) => (
     <div
       className="song-box"
@@ -261,79 +253,47 @@ const togglePlay = (id) => {
       </div>
 
       <div className="song-info">
-        <div
-          className={`wave-anim ${currentPlaying === song._id ? "active" : ""}`}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
+        <div className={`wave-anim ${currentPlaying === song._id ? "active" : ""}`}>
+          <span></span><span></span><span></span><span></span><span></span>
         </div>
         <h3>{song.title}</h3>
         <p>{song.artist}</p>
       </div>
 
       <div className="song-tags">
-        <span
-          onClick={(e) => {
-            e.stopPropagation();
-            setFilterTag(song.type);
-          }}
-        >
-          #{song.type}
-        </span>
-        <span
-          onClick={(e) => {
-            e.stopPropagation();
-            setFilterTag(song.subtype);
-          }}
-        >
-          #{song.subtype}
-        </span>
+        <span onClick={(e) => { e.stopPropagation(); setFilterTag(song.type); }}>#{song.type}</span>
+        <span onClick={(e) => { e.stopPropagation(); setFilterTag(song.subtype); }}>#{song.subtype}</span>
       </div>
 
       <div className="song-meta">
-        <span>
-          ⏱ {formatTime(currentTimes[song._id] || 0)} /{" "}
-          {formatTime(durations[song._id] || 0)}
-        </span>
+        <span>⏱ {formatTime(currentTimes[song._id] || 0)} / {formatTime(durations[song._id] || 0)}</span>
         <span>{song.bpm} BPM</span>
       </div>
 
       <div className="song-controls" onClick={(e) => e.stopPropagation()}>
         <button
-          className={`song-play-btn ${
-            currentPlaying === song._id ? "active" : ""
-          }`}
+          className={`song-play-btn ${currentPlaying === song._id ? "active" : ""}`}
           onClick={() => togglePlay(song._id)}
         >
           {currentPlaying === song._id ? "⏹ หยุด" : "▶ เล่น"}
         </button>
-        <button
-          className="song-download-btn"
-          onClick={() => handleDownload(song)}
-        >
+        <button className="song-download-btn" onClick={() => handleDownload(song)}>
           ⬇ ดาวน์โหลด
         </button>
       </div>
 
       <div className="song-progress">
-        <div
-          className="progress-fill"
-          style={{ width: `${getProgressPercentage(song._id)}%` }}
-        ></div>
+        <div className="progress-fill" style={{ width: `${getProgressPercentage(song._id)}%` }}></div>
       </div>
 
-   <audio
-  ref={(el) => (audioRefs.current[song._id] = el)}
-  id={`audio-${song._id}`}
-  src={`${BASE_URL}/${song.filePath}`}
-  onLoadedMetadata={(e) =>
-    setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
-  }
-/>
-
+      <audio
+        ref={(el) => (audioRefs.current[song._id] = el)}
+        id={`audio-${song._id}`}
+        src={`${BASE_URL}/${song.filePath}`}
+        onLoadedMetadata={(e) =>
+          setDurations((prev) => ({ ...prev, [song._id]: e.target.duration }))
+        }
+      />
     </div>
   );
 
@@ -349,26 +309,9 @@ const togglePlay = (id) => {
       )}
 
       <h2 className="songlist-title">
-        🎵{" "}
-        {filterTag
-          ? `Songs in category "${filterTag}"`
-  : searchTerm
-    ? "Searched songs"
-    : "All songs"}
+        🎵 {filterTag ? `Songs in category "${filterTag}"` : searchTerm ? "Searched songs" : "All songs"}
       </h2>
-      <div className="song-grid">{displayedSongs.map(renderSongBox)}</div>
-
-      {totalPages > 1 && (
-        <div className="pagination-dots">
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <span
-              key={i}
-              className={`dot ${i === currentPage ? "active" : ""}`}
-              onClick={() => setCurrentPage(i)}
-            ></span>
-          ))}
-        </div>
-      )}
+      <div className="song-grid">{filteredSongs.map(renderSongBox)}</div>
 
       {filterTag && (
         <button className="clear-filter" onClick={() => setFilterTag(null)}>
