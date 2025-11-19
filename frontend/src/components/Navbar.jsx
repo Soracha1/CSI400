@@ -16,6 +16,9 @@ function Navbar() {
   const [volume, setVolume] = useState(0.5);
   const [showSlider, setShowSlider] = useState(false);
 
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   const socketRef = useRef(null);
   const navigate = useNavigate();
 
@@ -176,24 +179,36 @@ function Navbar() {
           </Link>
         )}
 
+        {/* Admin Dropdown */}
         {user && user.role === "admin" && (
-          <>
-            <Link to="/admin" className="nav-link admin-link">
-              Admin Panel
-            </Link>
-            <Link to="/admin/songs" className="nav-link admin-link">
-              Songs Management
-            </Link>
-            <Link to="/admin/analytics" className="nav-link admin-link">
-              Analytics
-            </Link>
-            <Link to="/admin/generate-codes" className="nav-link admin-link">
-              Generate Codes
-            </Link>
-            <Link to="/admin/code-history" className="nav-link admin-link">
-              Redeem Code History
-            </Link>
-          </>
+          <div className="admin-dropdown">
+            <button
+              className="nav-link admin-link dropdown-toggle"
+              onClick={() => setShowAdminMenu(!showAdminMenu)}
+            >
+              Admin
+            </button>
+
+            {showAdminMenu && (
+              <div className="dropdown-menu">
+                <Link to="/admin" className="dropdown-item">
+                  Admin Panel
+                </Link>
+                <Link to="/admin/songs" className="dropdown-item">
+                  Songs Management
+                </Link>
+                <Link to="/admin/analytics" className="dropdown-item">
+                  Analytics
+                </Link>
+                <Link to="/admin/generate-codes" className="dropdown-item">
+                  Generate Code
+                </Link>
+                <Link to="/admin/code-history" className="dropdown-item">
+                  Redeem Code History
+                </Link>
+              </div>
+            )}
+          </div>
         )}
 
         <Link to="/premium" className="nav-link">
@@ -206,10 +221,27 @@ function Navbar() {
         {/* Notifications */}
         {user && (
           <div className="notification-wrapper">
-            <button className="icon-button">
+            <button
+              className="icon-button"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
               <FaBell size={18} />
               {unreadCount > 0 && <span className="notification-dot"></span>}
             </button>
+
+            {showNotifications && (
+              <div className="notification-dropdown">
+                {notifications.length === 0 && <p>No notifications</p>}
+                {notifications.map((n, idx) => (
+                  <div
+                    key={idx}
+                    className={`notification-item ${n.unread ? "unread" : ""}`}
+                  >
+                    {n.message}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
