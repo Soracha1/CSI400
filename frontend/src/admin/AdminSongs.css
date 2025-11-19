@@ -1,119 +1,22 @@
-.admin-songs-wrapper {
+.adminsong-title {
   text-align: center;
-  background-color: #2b2f3a;
-  color: #fff;
-  padding: 40px 0;
-  min-height: 100vh;
+  margin-bottom: 20px;
 }
 
-/* ตารางพื้นฐาน */
-.admin-table {
-  width: 90%;
-  margin: 30px auto;
-  border-collapse: collapse;
-  background: #f9f9ff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-}
-
-/* หัวตาราง */
-.admin-table thead {
-  background: linear-gradient(135deg, #00c6ff, #0072ff);
+.song-edit-btn {
+  background-color: #4caf50;
   color: white;
-  font-weight: bold;
-}
-
-.admin-table th {
-  padding: 14px;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-/* แถวข้อมูล */
-.admin-table td {
-  padding: 12px;
-  font-size: 0.85rem;
-  color: #333;
-  text-align: center;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-/* เส้นคั่นแถว */
-.admin-table tr:nth-child(even) td {
-  background: #eef2ff;
-}
-
-/* Hover แถว */
-.admin-table tr:hover td {
-  background: #d8e6ff;
-  transition: 0.2s;
-}
-
-
-.song-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 25px;
-}
-
-.song-box {
-  background: linear-gradient(180deg, #f9f9ff 0%, #b4b8ff 100%);
-  border-radius: 18px;
-  width: 210px;
-  padding: 16px;
-  color: #000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-  transition: all 0.3s ease;
-}
-
-.song-box:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-}
-
-.song-info h3 {
-  font-size: 1rem;
-  margin: 0;
-  font-weight: bold;
-}
-
-.song-info p {
-  font-size: 0.85rem;
-  color: #333;
-}
-
-.song-tags span {
-  background: #93d7f7;
-  color: #333;
-  font-size: 0.7rem;
-  border-radius: 12px;
-  padding: 3px 8px;
-  margin: 2px;
-}
-
-.song-meta {
-  font-size: 0.8rem;
-  color: #333;
-}
-
-.song-controls {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.song-controls button {
-  background: linear-gradient(135deg, #00c6ff, #0072ff);
   border: none;
-  color: white;
-  font-weight: 500;
-  border-radius: 18px;
-  padding: 4px 10px;
+  padding: 6px 6px;
+  cursor: pointer;
+  border-radius: 10px;
 }
- 
+
+.song-delete-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 6px;
+  cursor: pointer;
+  border-radius: 10px;
+}
