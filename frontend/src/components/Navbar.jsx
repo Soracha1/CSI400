@@ -1,4 +1,3 @@
-// Navbar.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -16,17 +15,13 @@ function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [volume, setVolume] = useState(0.5);
   const [showSlider, setShowSlider] = useState(false);
+
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // NEW: Admin menu dropdown
-  const [showAdminMenu, setShowAdminMenu] = useState(false);
-
   const socketRef = useRef(null);
-  const userIdRef = useRef(null);
-  const backgroundAudioRef = useRef(null);
   const navigate = useNavigate();
 
-  // ================== Fetch limits ==================
   const fetchLimits = async (id) => {
     try {
       const res = await fetch(`http://localhost:5000/api/user/${id}/limits`);
@@ -37,75 +32,35 @@ function Navbar() {
     }
   };
 
-  // ================== Load notifications ==================
-  const loadNotifications = async (userId) => {
-    if (!userId) return;
+  const loadNotifications = async () => {
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/notifications?userId=${userId}`
-      );
+      const res = await fetch("http://localhost:5000/api/notifications");
       const data = await res.json();
       const notifWithUnread = data.map((n) => ({ ...n, unread: true }));
       setNotifications(notifWithUnread);
-      setUnreadCount(notifWithUnread.length);
+      setUnreadCount(notifWithUnread.filter((n) => n.unread).length);
     } catch (err) {
       console.error("Error loading notifications:", err);
     }
   };
 
-  // ================== First load user ==================
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      setUser(parsed);
-      userIdRef.current = parsed._id;
-      fetchLimits(parsed._id);
-      loadNotifications(parsed._id);
-    }
-  }, []);
-
-  // ================== Volume slider ==================
-  useEffect(() => {
-    if (backgroundAudioRef.current) {
-      backgroundAudioRef.current.volume = volume;
-    }
-    window.dispatchEvent(new CustomEvent("volumeChanged", { detail: volume }));
-  }, [volume]);
-
-  // ================== Socket.IO ==================
-  useEffect(() => {
-    if (!userIdRef.current) return;
-
-    socketRef.current = io("http://localhost:5000");
-
-    socketRef.current.on("connect", () => {
-      console.log("Socket connected:", socketRef.current.id);
-    });
-
-    socketRef.current.on("notification", (notif) => {
-      if (notif.userId === userIdRef.current) {
-        const newNotif = { ...notif, unread: true };
-        setNotifications((prev) => [newNotif, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-      }
-    });
-
-    return () => {
-      if (socketRef.current) socketRef.current.disconnect();
-    };
-  }, []);
-
-  // ================== Listen for login/logout/profile updates ==================
-  useEffect(() => {
-    const updateUser = () => {
+    const updateUserFromLocalStorage = () => {
       const savedUser = localStorage.getItem("user");
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
-        userIdRef.current = parsed._id;
         fetchLimits(parsed._id);
-        loadNotifications(parsed._id);
+        loadNotifications();
+
+        if (!socketRef.current) {
+          socketRef.current = io("http://localhost:5000");
+          socketRef.current.on("notification", (notif) => {
+            const newNotif = { ...notif, unread: true };
+            setNotifications((prev) => [newNotif, ...prev]);
+            setUnreadCount((prev) => prev + 1);
+          });
+        }
       } else {
         setUser(null);
         setLimits(null);
@@ -114,26 +69,48 @@ function Navbar() {
       }
     };
 
-    window.addEventListener("userLoggedIn", updateUser);
-    window.addEventListener("userLoggedOut", updateUser);
-    window.addEventListener("profileUpdated", (e) => setUser(e.detail));
+    updateUserFromLocalStorage();
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      localStorage.setItem("token", token);
+      fetch("http://localhost:5000/auth/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          localStorage.setItem("user", JSON.stringify(data));
+          window.dispatchEvent(new Event("userLoggedIn"));
+          updateUserFromLocalStorage();
+          navigate("/dashboard");
+        });
+    }
+
+    const handleLoginEvent = () => updateUserFromLocalStorage();
+    const handleProfileUpdated = (event) => setUser(event.detail);
+
+    window.addEventListener("userLoggedIn", handleLoginEvent);
+    window.addEventListener("userLoggedOut", handleLoginEvent);
+    window.addEventListener("profileUpdated", handleProfileUpdated);
 
     return () => {
-      window.removeEventListener("userLoggedIn", updateUser);
-      window.removeEventListener("userLoggedOut", updateUser);
-      window.removeEventListener("profileUpdated", (e) => setUser(e.detail));
+      window.removeEventListener("userLoggedIn", handleLoginEvent);
+      window.removeEventListener("userLoggedOut", handleLoginEvent);
+      window.removeEventListener("profileUpdated", handleProfileUpdated);
+      if (socketRef.current) socketRef.current.disconnect();
     };
-  }, []);
+  }, [navigate]);
 
-  // ================== Logout ==================
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
     Swal.fire({
       icon: "success",
-      title: "ออกจากระบบแล้ว",
-      timer: 1500,
+      title: "ออกจากระบบเรียบร้อย",
+      text: "🚪 คุณได้ออกจากระบบแล้ว",
+      timer: 2000,
       showConfirmButton: false,
       toast: true,
       position: "top-end",
@@ -143,29 +120,11 @@ function Navbar() {
     navigate("/");
   };
 
-  // ================== Notifications ==================
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
-
-    if (!showNotifications) {
-      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-      setUnreadCount(0);
-    }
-  };
-
+  const handleVolumeChange = (value) => setVolume(Number(value));
   const avatarUrl = user?.avatar || user?.picture || defaultAvatar;
 
   return (
     <header className="header">
-      {/* Background audio */}
-      <audio
-        ref={backgroundAudioRef}
-        src="/background.mp3"
-        autoPlay
-        loop
-        style={{ display: "none" }}
-      />
-
       <div className="header-left">
         <Link to="/">
           <img src={logo} alt="Logo" className="logo" />
@@ -173,11 +132,12 @@ function Navbar() {
       </div>
 
       <div className="header-right">
-        {/* Volume control */}
+        {/* Volume Control */}
         <div className="volume-container">
           <button
             className="icon-button"
             onClick={() => setShowSlider(!showSlider)}
+            title="ปรับระดับเสียงทั้งหมดในเว็บ"
           >
             🔊
           </button>
@@ -188,29 +148,39 @@ function Navbar() {
               max="1"
               step="0.01"
               value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
+              onChange={(e) => handleVolumeChange(e.target.value)}
               className="volume-slider"
             />
           )}
         </div>
 
-        {/* Upload/Download Limits */}
-        {user && limits && (
+        {/* Usage Info */}
+        {limits && user && (
           <div className="usage-info">
-            Upload: {limits.uploadCount}/{limits.maxUpload} | Download:{" "}
+            Uploads: {limits.uploadCount}/{limits.maxUpload} | Downloads:{" "}
             {limits.downloadCount}/{limits.maxDownload}
           </div>
         )}
 
-        {/* Upload */}
+        {/* Member Status & Plan Expiry */}
+        {user && (
+          <div className="member-info">
+            Member: {user.plan || "Free"}
+            {user.planExpire && (
+              <> | Expire: {new Date(user.planExpire).toLocaleDateString()}</>
+            )}
+          </div>
+        )}
+
+        {/* Navigation Links */}
         {user && (
           <Link to="/upload" className="nav-link">
             Upload
           </Link>
         )}
 
-        {/* ================== Admin Dropdown ================== */}
-        {user?.role === "admin" && (
+        {/* Admin Dropdown */}
+        {user && user.role === "admin" && (
           <div className="admin-dropdown">
             <button
               className="nav-link admin-link dropdown-toggle"
@@ -233,12 +203,14 @@ function Navbar() {
                 <Link to="/admin/generate-codes" className="dropdown-item">
                   Generate Code
                 </Link>
+                <Link to="/admin/code-history" className="dropdown-item">
+                  Redeem Code History
+                </Link>
               </div>
             )}
           </div>
         )}
 
-        {/* User pages */}
         <Link to="/premium" className="nav-link">
           Premium
         </Link>
@@ -246,14 +218,15 @@ function Navbar() {
           Your Analytics
         </Link>
 
-        {/* Notification */}
+        {/* Notifications */}
         {user && (
           <div className="notification-wrapper">
-            <button className="icon-button" onClick={toggleNotifications}>
+            <button
+              className="icon-button"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
               <FaBell size={18} />
-              {unreadCount > 0 && (
-                <span className="notification-dot">{unreadCount}</span>
-              )}
+              {unreadCount > 0 && <span className="notification-dot"></span>}
             </button>
 
             {showNotifications && (
@@ -262,9 +235,7 @@ function Navbar() {
                 {notifications.map((n, idx) => (
                   <div
                     key={idx}
-                    className={`notification-item ${
-                      n.unread ? "unread" : ""
-                    }`}
+                    className={`notification-item ${n.unread ? "unread" : ""}`}
                   >
                     {n.message}
                   </div>
@@ -274,11 +245,11 @@ function Navbar() {
           </div>
         )}
 
-        {/* Profile */}
+        {/* Profile / Login-Logout */}
         {user ? (
           <>
             <Link to="/profile" className="profile-link">
-              <img src={avatarUrl} className="avatar" />
+              <img src={avatarUrl} alt="Profile" className="avatar" />
             </Link>
             <button onClick={handleLogout} className="gradient-login-button">
               Logout

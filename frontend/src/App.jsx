@@ -21,6 +21,7 @@ import AdminSongs from "./admin/AdminSongs";
 import AdminAnalytics from "./admin/AdminAnalytics";
 import UserAnalytics from "./analytic/UserAnalytics";
 import AdminGenCode from "./admin/AdminGenCode";
+import AdminCodeHistory from "./admin/AdminCodeHistory";
 
 function AppWrapper() {
   const location = useLocation();
@@ -86,6 +87,7 @@ function AppWrapper() {
         <Route path="/admin/generate-codes" element={<AdminGenCode />} />
 
         {/* Analytics */}
+        <Route path="/admin/code-history" element={<AdminCodeHistory />} />
         <Route path="/analytics" element={<UserAnalytics />} />
 
         {/* Auth */}
